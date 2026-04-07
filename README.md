@@ -1,173 +1,94 @@
 # Quantroot
 
-> Post-quantum security for Bitcoin Taproot — a soft-fork upgrade path using SPHINCS+ signatures.
+**Post-Quantum Security for Bitcoin Taproot**
 
-Quantroot is a Docker Compose monorepo for developing and testing two companion
-consensus drafts that together provide comprehensive post-quantum defense for
-Taproot. The canonical specification knowledge base lives in `repos/bips`:
+Quantroot is a soft-fork upgrade path that brings [SPHINCS+](https://sphincs.org/) (SLH-DSA) post-quantum signatures to Bitcoin through Taproot — with zero cost today and full protection when you need it.
 
-- **[OP_CHECKSPHINCSVERIFY draft](repos/bips/bip-0369.mediawiki)** — Redefines `OP_NOP4` as
-  `OP_CHECKSPHINCSVERIFY`, a new Tapscript opcode for verifying SPHINCS+
-  (SLH-DSA) signatures carried in the Taproot annex.
-- **[Taproot key-path hardening draft](repos/bips/bip-0368.mediawiki)** — Hardens key-path spending by
-  requiring internal key disclosure via the annex and banning the BIP 341 NUMS
-  point, closing the quantum ECDLP attack vector on key-path spends.
+**Website:** [www.quantroot.org](https://www.quantroot.org)
 
-The proof-of-concept implementation lives in a
-[Bitcoin Core fork](https://github.com/cmdruid/bitcoin) (branch `quantroot`)
-included as a submodule at `repos/bitcoin`.
+## How It Works
 
-## Why Quantroot?
+Quantroot is a **quantum insurance policy** you can deploy today:
 
-A quantum computer capable of solving the Elliptic Curve Discrete Logarithm
-Problem (ECDLP) could forge Schnorr signatures and spend any Taproot output via
-key-path — bypassing any post-quantum protections hidden in the script tree.
+1. **Create Taproot outputs** with a hidden hybrid tapleaf. Zero on-chain overhead — your outputs look like ordinary Taproot.
+2. **Spend normally** with fast Schnorr key-path spends (~64 bytes). The hybrid leaf stays hidden.
+3. **If a quantum threat emerges**, the network activates the soft fork. BIP 368 hardens key-path spends; BIP 369 enables SPHINCS+ verification.
+4. **Redeem via the hybrid tapleaf** using both Schnorr and SPHINCS+ signatures. Your funds are protected by hash-based cryptography that doesn't rely on elliptic curves.
 
-Quantroot's approach is a **quantum insurance policy** you can deploy today at
-zero cost:
+## Four Companion BIPs
 
-1. **Create Taproot outputs** with a hidden SPHINCS+ tapleaf in the MAST tree.
-   No on-chain overhead — the tapleaf is just a hash nobody can see.
-2. **Spend normally** with fast Schnorr key-path or script-path spends. Business
-   as usual.
-3. **If a quantum threat emerges**, the community activates the soft fork. BIP
-   368 hardens key-path spends; BIP 369 enables SPHINCS+ script-path
-   verification.
-4. **Redeem via SPHINCS+** through your post-quantum tapleaf. Your funds are
-   protected by hash-based cryptography that doesn't rely on elliptic curves.
+### Consensus Layer
 
-## Project Status
+| BIP | Title | Description |
+|-----|-------|-------------|
+| [368](repos/bips/bip-0368.mediawiki) | Taproot Key-Path Hardening | Requires internal key disclosure via annex, bans NUMS points, closes quantum ECDLP attack on key-path spends |
+| [369](repos/bips/bip-0369.mediawiki) | OP_CHECKSPHINCSVERIFY | Redefines OP_NOP4 for SPHINCS+ signature verification in Tapscript, signatures carried in the Taproot annex |
 
-Both BIPs are **implemented as proof-of-concept** on a Bitcoin Core fork with:
+### Wallet Layer
 
-- 56 functional tests (activation, success/failure paths, hybrid security,
-  interaction tests)
-- NIST FIPS 205 SLH-DSA verification with custom Bitcoin parameter set
-- Benchmarks (~1.8 ms verify, 64x Schnorr) and calibrated sigop costs
-- Test vectors and fuzz targets for both BIPs
-- BIP 9 versionbits activation with buried deployment for regtest
-
-| Metric | Value |
-|--------|-------|
-| SPHINCS+ signature size | 4,080 bytes |
-| SPHINCS+ public key size | 32 bytes |
-| Schnorr P2TR verify | ~27 µs (baseline) |
-| SPHINCS+ verify | ~1,756 µs (~64x Schnorr) |
-| SPHINCS+ sign | ~918 ms (offline, doesn't affect validation) |
-| Sigop weight | 3,200 (64x Schnorr's 50) |
-| Security level | NIST Category 1 (128-bit classical) |
-
-## Roadmap
-
-### Ready Now
-- Community review — post BIPs to bitcoin-dev mailing list
-- Update status reports in `dev/reports/`
-
-### Medium-Term
-- W+C_P+FP optimization (3,408-byte signatures) — drop-in crypto library swap,
-  same security level, ~16% size reduction
-- Wallet support — key management, NUMS address generation, "full insurance"
-  construction UX
-
-### Long-Term
-- External security audit
-- BIP 9 versionbits activation parameters (currently TBD in both BIPs)
-
-## Prerequisites
-
-- Docker Engine 24+
-- Docker Compose v2
-- Git 2.30+
-- 8 GB RAM recommended
-- 20 GB disk recommended
+| BIP | Title | Description |
+|-----|-------|-------------|
+| [395](repos/bips/bip-0395.mediawiki) | Quantum-Insured Extended Keys | Extends BIP 32 with SPHINCS+ key material (qpub/qprv), `qr()` output descriptor, seed-only backup |
+| [377](repos/bips/bip-0377.mediawiki) | PSBT Extensions for SPHINCS+ | PSBT fields for SPHINCS+ pubkeys, signatures, and annex data with two-round signing workflow |
 
 ## Quick Start
 
 ```bash
-# Clone the repository (with submodules)
-git clone --recurse-submodules <repo-url> && cd quantroot
-
-# Initialize and build containers
-make init
-
-# Copy and configure environment
-cp .env.example .env
-
-# Start the stack
-make start
-
-# Verify services are healthy
-make health
+bitcoin-cli createwallet "quantum"
+bitcoin-cli createsphincskey
+bitcoin-cli getquantumaddress
+bitcoin-cli exportqpub
+bitcoin-cli listsphincskeys
 ```
 
-## Building the Bitcoin Core Fork Directly
+Both BIP 368 and BIP 369 are active from block 1 on regtest.
 
-If you want to build and test the consensus code outside of Docker:
+## Benchmarks
+
+| | Schnorr | SPHINCS+ |
+|---|---------|----------|
+| **Sign** | ~27 µs | ~918 ms |
+| **Verify** | ~27 µs | ~1,756 µs (64x) |
+| **Signature** | 64 bytes (16 vB) | 4,080 bytes (1,020 vB) |
+
+SPHINCS+ uses NIST FIPS 205 SLH-DSA with a custom Bitcoin parameter set at NIST Category 1 (128-bit classical security).
+
+## Test Coverage
+
+| Category | Count |
+|----------|-------|
+| Consensus tests (BIP 368 + 369) | 56 |
+| Wallet unit tests (key, qextkey, descriptor, DB) | 75 |
+| Functional tests (RPCs, PSBT, activation) | 37 |
+| **Total** | **168** |
+
+## Building from Source
 
 ```bash
 cd repos/bitcoin
-
-# Build
 cmake -B build && cmake --build build -j$(nproc)
 
 # Unit tests
-build/bin/test_bitcoin --run_test=script_tests,transaction_tests
+build/bin/test_bitcoin --run_test=sphincskeys_tests,qextkey_tests,qis_descriptor_tests,script_tests
 
-# BIP 369 functional tests
-python3 test/functional/feature_sphincs.py --configfile=build/test/config.ini
-
-# BIP 368 functional tests
-python3 test/functional/feature_keypath_hardening.py --configfile=build/test/config.ini
-
-# Activation tests
-python3 test/functional/feature_sphincs.py --activation --configfile=build/test/config.ini
-python3 test/functional/feature_keypath_hardening.py --activation --configfile=build/test/config.ini
-
-# Benchmarks (requires -DBUILD_BENCH=ON)
-build/bin/bench_bitcoin -filter="Sphincs"
+# Functional tests
+python3 test/functional/wallet_sphincs.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_psbt.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_activation.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_scriptpath.py --configfile=build/test/config.ini
 ```
-
-## Key Commands
-
-| Command | Description |
-|---------|-------------|
-| `make help` | Print all available commands |
-| `make init` | Initialize submodules and build containers |
-| `make start` | Start core services |
-| `make stop` | Stop all services |
-| `make health` | Check service health |
-| `make test-e2e` | Run full E2E test suite |
-| `make test-smoke` | Run fast smoke tests |
-| `make check` | Static checks and doc consistency |
-| `make logs` | Follow all service logs |
-| `make reset` | Stop and remove all runtime data |
 
 ## Repository Layout
 
 | Directory | Contents |
 |-----------|----------|
 | `repos/bitcoin` | Bitcoin Core fork (submodule, `quantroot` branch) |
-| `repos/bips` | Canonical local knowledge base for BIP specifications and vectors |
-| `services/` | Docker service wrappers |
-| `docs/` | Domain guides, overview, glossary, and navigation into `repos/bips` |
-| `dev/` | Developer workflow, conventions, ADRs |
+| `repos/bips` | BIP specifications and test vectors |
+| `services/website` | Project website ([www.quantroot.org](https://www.quantroot.org)) |
+| `docs/` | Domain guides, overview, glossary |
+| `dev/` | Plans, specs, reports, conventions |
 | `test/` | Cross-service test infrastructure |
-| `scripts/` | Runtime helpers (mounted into containers) |
-| `config/` | Shared runtime configuration |
-
-## Knowledge Base
-
-| I want to... | Go to |
-|--------------|-------|
-| Understand the domain and BIPs | [docs/INDEX.md](docs/INDEX.md) |
-| Set up my dev environment | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Learn conventions and structure | [dev/README.md](dev/README.md) |
-| Run or debug tests | [test/README.md](test/README.md) |
-| Operate as an AI agent | [CLAUDE.md](CLAUDE.md) |
 
 ## License
 
-This monorepo infrastructure is MIT licensed. The Bitcoin Core fork retains its
-upstream MIT license. The vendored SLH-DSA library (`slhdsa-c`) is triple
-licensed under Apache-2.0 / ISC / MIT. BIP specifications in `repos/bips` are
-BSD-3-Clause.
+This monorepo infrastructure is MIT licensed. The Bitcoin Core fork retains its upstream MIT license. The vendored SLH-DSA library is triple licensed under Apache-2.0 / ISC / MIT. BIP specifications are BSD-3-Clause.
