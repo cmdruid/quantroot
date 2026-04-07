@@ -29,9 +29,9 @@ services/website/
 │   │   ├── QuickStart.astro 5-command smoke test + stats
 │   │   ├── HowItWorks.astro 4-step quantum insurance explainer
 │   │   ├── BIPs.astro       4-card BIP overview grid
-│   │   ├── ScriptExample.astro  Annotated hybrid script code block
-│   │   ├── WalletConstructions.astro  2-card construction comparison
-│   │   ├── Benchmarks.astro Performance bars + test coverage stats
+│   │   ├── ScriptExample.astro  Annotated hybrid script code block + compact construction summary
+│   │   ├── Benchmarks.astro Performance cards + consensus pricing
+│   │   ├── TestCoverage.astro  Test count cards (consensus, unit, functional)
 │   │   ├── Architecture.astro  Expandable design decision FAQ
 │   │   └── Footer.astro     Links and license
 │   └── styles/
@@ -93,8 +93,8 @@ Single-page scroll with sections in this order:
 4. **HowItWorks**
 5. **BIPs**
 6. **ScriptExample**
-7. **WalletConstructions**
-8. **Benchmarks**
+7. **Benchmarks**
+8. **TestCoverage**
 9. **Architecture**
 10. **Footer**
 
@@ -144,7 +144,6 @@ Compact section between Hero and HowItWorks. Contains:
 - **Heading**: "Get Started in 5 Commands"
 - **Code block**: 5 `bitcoin-cli` commands with `$` prompt, purple-highlighted
   RPC names, orange string literals
-- **Stats row**: 3 cards showing "7 New RPCs", "170 Tests Passing", "0 Breaking Changes"
 
 ### HowItWorks
 
@@ -154,16 +153,22 @@ Compact section between Hero and HowItWorks. Contains:
 - **Description**: paragraph explaining the step
 - **Detail**: italic secondary text with technical specifics
 
-Cards have `hover:border-quantum/40` effect. Steps describe the quantum
-insurance lifecycle: create → spend → threat → redeem.
+Section stays compact and symmetrical. It uses a 2x2 card grid with a centered
+event divider between the rows.
 
 Section heading: "Quantum Insurance for Your Bitcoin"
+
+- **Top row**: step 1 "Create Taproot Outputs Today", step 2 "Spend Normally with Key-Path"
+- **Center divider**: rounded pill labeled "Quantum Threat Emerges"
+- **Bottom row**: step 3 "Activate Soft Fork", step 4 "Redeem via Hybrid Tapleaf"
+- **Desktop behavior**: clean 2x2 symmetry with a horizontal divider line behind the event pill
+- **Mobile behavior**: cards stack naturally with the event divider between rows
 
 ### BIPs
 
 4 BIP cards in a 2x2 grid. Each card has:
-- **Tag pill**: colored badge ("Key-path protection", "Script-path protection", "Wallet layer")
-- **Title**: "BIP 368: Key-Path Hardening" format
+- **Tag pill**: shown on the consensus cards as "Consensus Change"; omitted on the wallet-layer cards
+- **Title**: "BIP 368: Taproot Hardening" format
 - **Bullet points**: 5 items per card with colored dots
 
 First row: consensus BIPs (368 orange, 369 purple).
@@ -183,26 +188,20 @@ Annotated code block showing the hybrid Tapscript. Contains:
   - Right (purple dot): "Upgraded nodes" — explains dual verification
 - **Signing order note**: italic text below the block
 
-### WalletConstructions
-
-2 construction cards side by side. Each has:
-- **Name + recommended badge**: "Hybrid Leaf + Key-Path" with purple "Recommended" tag
-- **Subtitle**: secondary description
-- **Description**: paragraph
-- **Structure block**: dark mono code showing the Taproot tree layout
-- **Pros/cons list**: green `+` for pros, orange `-` for cons
-
-Card 1 (recommended): real internal key + hybrid leaf.
-Card 2 (alternative): NUMS + separate Schnorr/hybrid leaves.
-
 ### Benchmarks
 
-3 performance bars + validation weight note + test coverage grid. Each bar has:
-- **Label**: operation name (left)
-- **Time + ratio**: mono text (right) with purple ratio badge
-- **Progress bar**: gradient from purple to orange
+Performance comparison of SPHINCS+ operations against the Schnorr baseline:
+- **Three benchmark cards**: baseline Schnorr verify, on-chain SPHINCS+ verify, offline SPHINCS+ sign
+- **Time + ratio badge**: each card shows the raw figure and relative multiple
+- **Explanatory note**: each card explains why that number matters operationally
+- **Consensus pricing panel**: centered note for `VALIDATION_WEIGHT_PER_SPHINCS_SIGOP = 3200`
 
-Test coverage section: 3 stat cards showing consensus/unit/functional test counts.
+### TestCoverage
+
+Standalone section showing test coverage across three layers:
+- **Three stat cards**: consensus tests (56), wallet unit tests (75), functional tests (37)
+- **Total count**: bold "168 total tests passing" summary below cards
+- Cards have `hover:border-quantum/30` interaction
 
 ### Architecture
 

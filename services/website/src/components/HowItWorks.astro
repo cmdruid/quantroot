@@ -1,53 +1,99 @@
 ---
-const steps = [
+const topRow = [
   {
     number: "01",
     title: "Create Taproot Outputs Today",
     description:
-      "Add a hidden hybrid tapleaf to your Taproot outputs. The tapleaf requires both Schnorr and SPHINCS+ signatures, ensuring pre-activation safety — OP_CHECKSIG is always enforced.",
-    detail: "Zero on-chain overhead. Your transactions look identical to any other Taproot spend.",
+      "Add a hidden hybrid tapleaf to your Taproot outputs. OP_CHECKSIG stays enforced before activation, so the construction is safe to deploy now.",
+    detail:
+      "Zero on-chain overhead. Your outputs look like ordinary Taproot until the hybrid path is revealed.",
+    tone: "quantum",
   },
   {
     number: "02",
     title: "Spend Normally with Key-Path",
     description:
-      "Use fast Schnorr key-path spends as usual (~64 bytes). The hybrid tapleaf is never revealed on-chain.",
-    detail: "Post-BIP 368: key-path includes an annex disclosing the internal key (~130 bytes total). Still more efficient than script-path.",
+      "Before activation, non-upgraded nodes follow the standard Taproot path and the hybrid leaf remains hidden.",
+    detail:
+      "After activation, key-path adds the internal-key annex and still stays leaner than a script-path spend.",
+    tone: "btc-orange",
   },
+];
+
+const bottomRow = [
   {
     number: "03",
-    title: "Quantum Threat Emerges",
+    title: "Activate Soft Fork",
     description:
-      "If quantum computers advance to threaten elliptic-curve cryptography, the community activates the soft fork via BIP 9 signaling.",
-    detail: "BIP 368 hardens key-path spends. BIP 369 enables SPHINCS+ verification. Both must activate together.",
+      "Once a credible quantum threat appears, the network activates the companion soft fork to harden key-path spending and enable SPHINCS+ validation.",
+    detail:
+      "The key-path hardening draft and OP_CHECKSPHINCSVERIFY draft must activate together.",
+    tone: "quantum",
   },
   {
     number: "04",
     title: "Redeem via Hybrid Tapleaf",
     description:
-      "Spend through the hybrid tapleaf using both SPHINCS+ and Schnorr signatures. An attacker must break both simultaneously.",
-    detail: "SPHINCS+ (SLH-DSA) relies only on hash function security — no elliptic curves. 4,080-byte signature carried in the annex.",
+      "After activation, upgraded nodes can redeem through the hidden hybrid leaf using both Schnorr and SPHINCS+ signatures.",
+    detail:
+      "The SPHINCS+ signature lives in the annex and replaces elliptic-curve trust with hash-based security.",
+    tone: "btc-orange",
   },
 ];
+
+const toneClasses = {
+  quantum: "text-quantum",
+  "btc-orange": "text-btc-orange",
+};
+
+const hoverClasses = {
+  quantum: "hover:border-quantum/40",
+  "btc-orange": "hover:border-btc-orange/40",
+};
 ---
 
 <section id="how-it-works" class="border-t border-border py-20 md:py-28">
   <div class="mx-auto max-w-5xl px-6">
-    <div class="mb-16 text-center">
+    <div class="mb-14 text-center">
       <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
         Quantum Insurance for Your Bitcoin
       </h2>
       <p class="mx-auto max-w-2xl text-text-secondary">
-        Protect your funds against future quantum threats with a strategy you can
-        deploy today — at zero cost.
+        A compact view of the two spending paths: standard Taproot behavior before
+        activation, and hybrid post-quantum redemption after the network upgrade.
       </p>
     </div>
 
-    <div class="grid gap-8 md:grid-cols-2">
-      {steps.map((step) => (
-        <div class="group rounded-xl border border-border bg-surface-raised p-6 transition-colors hover:border-quantum/40">
+    <div class="grid gap-6 md:grid-cols-2">
+      {topRow.map((step) => (
+        <div class={`rounded-xl border border-border bg-surface-raised p-6 transition-colors ${hoverClasses[step.tone]}`}>
           <div class="mb-3 flex items-center gap-3">
-            <span class="font-mono text-sm font-medium text-quantum">{step.number}</span>
+            <span class={`font-mono text-sm font-medium ${toneClasses[step.tone]}`}>{step.number}</span>
+            <h3 class="text-lg font-semibold">{step.title}</h3>
+          </div>
+          <p class="mb-3 leading-relaxed text-text-secondary">{step.description}</p>
+          <p class="text-sm text-text-secondary/70 italic">{step.detail}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="relative my-8">
+      <div class="hidden md:block absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-linear-to-r from-transparent via-border to-transparent"></div>
+      <div class="relative mx-auto max-w-md rounded-full border border-btc-orange/35 bg-linear-to-r from-btc-orange/12 via-surface-overlay to-btc-orange/12 px-5 py-3 text-center shadow-[0_0_0_1px_rgba(247,147,26,0.08)]">
+        <div class="mb-1 flex items-center justify-center gap-3 text-xs font-medium uppercase tracking-[0.2em] text-btc-orange">
+          <span class="rounded-full border border-btc-orange/40 bg-btc-orange/10 px-2 py-0.5 font-mono leading-none">!</span>
+          <span>Trigger Event</span>
+          <span class="rounded-full border border-btc-orange/40 bg-btc-orange/10 px-2 py-0.5 font-mono leading-none">!</span>
+        </div>
+        <div class="text-sm font-semibold text-text-primary">Quantum Threat Emerges</div>
+      </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+      {bottomRow.map((step) => (
+        <div class={`rounded-xl border border-border bg-surface-raised p-6 transition-colors ${hoverClasses[step.tone]}`}>
+          <div class="mb-3 flex items-center gap-3">
+            <span class={`font-mono text-sm font-medium ${toneClasses[step.tone]}`}>{step.number}</span>
             <h3 class="text-lg font-semibold">{step.title}</h3>
           </div>
           <p class="mb-3 leading-relaxed text-text-secondary">{step.description}</p>

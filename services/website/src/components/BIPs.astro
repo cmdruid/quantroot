@@ -2,8 +2,8 @@
 const bips = [
   {
     number: "BIP 368",
-    title: "Key-Path Hardening",
-    tag: "Key-path protection",
+    title: "Taproot Hardening",
+    tag: "Consensus Change",
     tagClass: "bg-btc-orange/10 text-btc-orange",
     dotClass: "bg-btc-orange",
     points: [
@@ -16,8 +16,8 @@ const bips = [
   },
   {
     number: "BIP 369",
-    title: "OP_CHECKSPHINCSVERIFY",
-    tag: "Script-path protection",
+    title: "SPHINCS Signatures",
+    tag: "Consensus Change",
     tagClass: "bg-quantum/10 text-quantum",
     dotClass: "bg-quantum",
     points: [
@@ -30,8 +30,8 @@ const bips = [
   },
   {
     number: "BIP 395",
-    title: "QI Extended Keys",
-    tag: "Wallet layer",
+    title: "Quantum-Insured Keys",
+    tag: "",
     tagClass: "bg-quantum/10 text-quantum",
     dotClass: "bg-quantum",
     points: [
@@ -45,7 +45,7 @@ const bips = [
   {
     number: "BIP 377",
     title: "PSBT Extensions",
-    tag: "Wallet layer",
+    tag: "",
     tagClass: "bg-btc-orange/10 text-btc-orange",
     dotClass: "bg-btc-orange",
     points: [
@@ -76,9 +76,11 @@ const bips = [
       {bips.map((bip) => (
         <div class="rounded-xl border border-border bg-surface-raised p-8">
           <div class="mb-4">
-            <span class:list={["mb-2 inline-block rounded-full px-3 py-1 text-xs font-medium", bip.tagClass]}>
-              {bip.tag}
-            </span>
+            {bip.tag && (
+              <span class:list={["mb-2 inline-block rounded-full px-3 py-1 text-xs font-medium", bip.tagClass]}>
+                {bip.tag}
+              </span>
+            )}
             <h3 class="text-2xl font-bold">
               <span class="text-text-secondary">{bip.number}:</span>{" "}
               <span class="font-mono text-xl">{bip.title}</span>

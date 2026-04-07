@@ -1,22 +1,46 @@
 ---
-const rows = [
+const benchmarks = [
   {
-    operation: "Schnorr P2TR verify",
+    label: "Schnorr Sign",
     time: "~27 \u00B5s",
-    ratio: "1\u00D7",
-    bar: 1.5,
+    ratio: "baseline",
+    note: "Standard Taproot key-path signing. The performance target for normal wallet operations.",
+    tone: "btc-orange",
   },
   {
-    operation: "SPHINCS+ verify",
-    time: "~1,756 \u00B5s",
-    ratio: "64\u00D7",
-    bar: 64,
-  },
-  {
-    operation: "SPHINCS+ sign",
+    label: "SPHINCS+ Sign",
     time: "~918 ms",
     ratio: "33,600\u00D7",
-    bar: 100,
+    note: "Offline wallet operation. Slower, but only used for emergency script-path spending.",
+    tone: "quantum",
+  },
+  {
+    label: "Schnorr Verify",
+    time: "~27 \u00B5s",
+    ratio: "baseline",
+    note: "Standard Taproot signature verification. The consensus baseline for validation cost.",
+    tone: "btc-orange",
+  },
+  {
+    label: "SPHINCS+ Verify",
+    time: "~1,756 \u00B5s",
+    ratio: "64\u00D7",
+    note: "On-chain consensus validation. The cost that matters for block verification.",
+    tone: "quantum",
+  },
+  {
+    label: "Schnorr Signature",
+    time: "64 bytes",
+    ratio: "16 vB",
+    note: "Key-path witness: just a single Schnorr signature. The most efficient Taproot spend.",
+    tone: "btc-orange",
+  },
+  {
+    label: "SPHINCS+ Signature",
+    time: "4,080 bytes",
+    ratio: "1,020 vB",
+    note: "Carried in the Taproot annex. Script-path witness also includes the Schnorr sig, script, and control block.",
+    tone: "quantum",
   },
 ];
 ---
@@ -25,61 +49,28 @@ const rows = [
   <div class="mx-auto max-w-5xl px-6">
     <div class="mb-16 text-center">
       <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-        Performance
+        Benchmarks
       </h2>
       <p class="mx-auto max-w-2xl text-text-secondary">
-        SPHINCS+ verification is ~64x slower than Schnorr, reflected in the weighted
-        sigop cost. Signing is offline and doesn't affect block validation.
+        SPHINCS+ signing and verification compared to the Schnorr baseline.
       </p>
     </div>
 
-    <div class="mx-auto max-w-3xl space-y-6">
-      {rows.map((row) => (
-        <div class="rounded-lg border border-border bg-surface-raised p-5">
-          <div class="mb-3 flex items-baseline justify-between">
-            <span class="font-medium">{row.operation}</span>
-            <div class="flex items-baseline gap-3">
-              <span class="font-mono text-sm text-text-secondary">{row.time}</span>
-              <span class="rounded bg-surface-overlay px-2 py-0.5 font-mono text-xs text-quantum">
-                {row.ratio}
-              </span>
-            </div>
+    <div class="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
+      {benchmarks.map((item) => (
+        <div class="rounded-xl border border-border bg-surface-raised p-6">
+          <div class={`mb-3 text-xs font-semibold uppercase tracking-[0.18em] ${item.tone === "quantum" ? "text-quantum" : "text-btc-orange"}`}>
+            {item.label}
           </div>
-          <div class="h-2 overflow-hidden rounded-full bg-surface-overlay">
-            <div
-              class="h-full rounded-full bg-gradient-to-r from-quantum to-btc-orange"
-              style={`width: ${row.bar}%`}
-            />
+          <div class="mb-3 flex items-end justify-between gap-3">
+            <span class="font-mono text-2xl font-bold">{item.time}</span>
+            <span class={`rounded px-2 py-1 font-mono text-xs ${item.tone === "quantum" ? "bg-quantum/10 text-quantum" : "bg-btc-orange/10 text-btc-orange"}`}>
+              {item.ratio}
+            </span>
           </div>
+          <p class="text-sm leading-relaxed text-text-secondary">{item.note}</p>
         </div>
       ))}
-    </div>
-
-    <div class="mt-10 rounded-lg border border-border bg-surface-raised p-6 mx-auto max-w-3xl">
-      <p class="text-sm text-text-secondary text-center">
-        <span class="font-mono text-text-primary">VALIDATION_WEIGHT_PER_SPHINCS_SIGOP = 3200</span>
-        <br />
-        64&times; Schnorr&rsquo;s weight of 50 &mdash; ensures SPHINCS+ transactions
-        pay proportional block-space cost.
-      </p>
-    </div>
-
-    <div class="mt-10 mx-auto max-w-3xl">
-      <h3 class="mb-4 text-lg font-semibold text-center">Test Coverage</h3>
-      <div class="grid gap-3 md:grid-cols-3">
-        <div class="rounded-lg border border-border bg-surface-raised p-4 text-center">
-          <div class="mb-1 font-mono text-xl font-bold text-quantum">56</div>
-          <div class="text-xs text-text-secondary">Consensus tests<br/>(BIP 368 + 369)</div>
-        </div>
-        <div class="rounded-lg border border-border bg-surface-raised p-4 text-center">
-          <div class="mb-1 font-mono text-xl font-bold text-btc-orange">75</div>
-          <div class="text-xs text-text-secondary">Wallet unit tests<br/>(key, qextkey, descriptor, DB)</div>
-        </div>
-        <div class="rounded-lg border border-border bg-surface-raised p-4 text-center">
-          <div class="mb-1 font-mono text-xl font-bold text-text-primary">37</div>
-          <div class="text-xs text-text-secondary">Wallet functional tests<br/>(RPCs, PSBT, activation)</div>
-        </div>
-      </div>
     </div>
   </div>
 </section>

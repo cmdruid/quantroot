@@ -1,0 +1,55 @@
+---
+const categories = [
+  {
+    count: 56,
+    label: "Consensus tests",
+    detail: "BIP 368 + 369",
+    tone: "quantum",
+  },
+  {
+    count: 75,
+    label: "Wallet unit tests",
+    detail: "key, qextkey, descriptor, DB",
+    tone: "btc-orange",
+  },
+  {
+    count: 37,
+    label: "Functional tests",
+    detail: "RPCs, PSBT, activation",
+    tone: "text-primary",
+  },
+];
+---
+
+<section class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Test Coverage
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        Every consensus rule, wallet operation, and signing path is covered
+        by automated tests across three layers.
+      </p>
+    </div>
+
+    <div class="mx-auto grid max-w-3xl gap-4 md:grid-cols-3">
+      {categories.map((cat) => (
+        <div class="rounded-xl border border-border bg-surface-raised p-6 text-center hover:border-quantum/30 transition-colors">
+          <div class={`mb-2 font-mono text-3xl font-bold ${cat.tone === "quantum" ? "text-quantum" : cat.tone === "btc-orange" ? "text-btc-orange" : "text-text-primary"}`}>
+            {cat.count}
+          </div>
+          <div class="mb-1 text-sm font-semibold">{cat.label}</div>
+          <div class="text-xs text-text-secondary">{cat.detail}</div>
+        </div>
+      ))}
+    </div>
+
+    <div class="mx-auto mt-6 max-w-3xl text-center">
+      <p class="font-mono text-2xl font-bold">
+        <span class="text-quantum">168</span>
+        <span class="text-text-secondary text-lg font-normal"> total tests passing</span>
+      </p>
+    </div>
+  </div>
+</section>
