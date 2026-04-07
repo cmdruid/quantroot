@@ -1,0 +1,15 @@
+data/*
+bin/*
+logs/*
+local/*
+.tmp/*
+node_modules
+__pycache__
+.pytest_cache
+.env
+config/*/.env
+compose.override.yml
+*.log
+*.db
+NOTES.md
+TODO.md

@@ -1,0 +1,14 @@
+.git
+data
+bin
+logs
+local
+.tmp
+node_modules
+__pycache__
+.pytest_cache
+*.log
+*.db
+NOTES.md
+TODO.md
+.env

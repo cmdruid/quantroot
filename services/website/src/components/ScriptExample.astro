@@ -1,0 +1,70 @@
+---
+
+---
+
+<section class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Hybrid Script in Action
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        A single Tapscript enforces both Schnorr and SPHINCS+ verification.
+        Non-upgraded nodes still validate the Schnorr check &mdash; security is
+        never weakened during activation.
+      </p>
+    </div>
+
+    <div class="mx-auto max-w-3xl rounded-xl border border-border bg-surface-raised overflow-hidden">
+      <!-- Code block -->
+      <div class="border-b border-border px-5 py-3">
+        <span class="text-xs font-medium text-text-secondary">Tapscript template</span>
+      </div>
+      <div class="px-6 py-5 font-mono text-sm leading-relaxed overflow-x-auto">
+        <div class="flex gap-4">
+          <span class="text-text-secondary select-none shrink-0">1</span>
+          <span>&lt;<span class="text-quantum">sphincs_pk</span>&gt; <span class="text-text-primary font-medium">OP_CHECKSPHINCSVERIFY</span> <span class="text-text-primary font-medium">OP_DROP</span></span>
+        </div>
+        <div class="flex gap-4">
+          <span class="text-text-secondary select-none shrink-0">2</span>
+          <span>&lt;<span class="text-btc-orange">schnorr_pk</span>&gt; <span class="text-text-primary font-medium">OP_CHECKSIG</span></span>
+        </div>
+      </div>
+
+      <!-- Annotations -->
+      <div class="border-t border-border grid gap-0 md:grid-cols-2">
+        <div class="border-b border-border p-5 md:border-b-0 md:border-r">
+          <div class="mb-2 flex items-center gap-2">
+            <span class="inline-block h-2 w-2 rounded-full bg-btc-orange"></span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Non-upgraded nodes</span>
+          </div>
+          <p class="text-sm leading-relaxed text-text-secondary">
+            <code class="text-text-primary">OP_NOP4</code> does nothing. SPHINCS+
+            pubkey is pushed, NOP4 skipped,
+            <code class="text-text-primary">OP_DROP</code> removes it.
+            <code class="text-text-primary">OP_CHECKSIG</code> validates the Schnorr
+            signature. Funds always protected.
+          </p>
+        </div>
+        <div class="p-5">
+          <div class="mb-2 flex items-center gap-2">
+            <span class="inline-block h-2 w-2 rounded-full bg-quantum"></span>
+            <span class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Upgraded nodes</span>
+          </div>
+          <p class="text-sm leading-relaxed text-text-secondary">
+            Both signatures verified.
+            <code class="text-text-primary">OP_CHECKSPHINCSVERIFY</code> consumes the
+            SPHINCS+ signature from the annex.
+            <code class="text-text-primary">OP_CHECKSIG</code> validates Schnorr.
+            An attacker must break <em>both</em>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-6 text-center text-sm text-text-secondary/70">
+      Signing order: SPHINCS+ first (sighash excludes sha_annex), build annex, then Schnorr signs
+      (sighash includes <code class="text-text-primary/70">sha_annex</code>).
+    </p>
+  </div>
+</section>

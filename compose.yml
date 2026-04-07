@@ -1,0 +1,39 @@
+# Quantroot Docker Compose Stack
+#
+# Script mount contract:
+#   - ./scripts    -> /dscript      (runtime helpers, all services)
+#   - ./test/scripts -> /dtestscript  (test runners, test services only)
+#   - ./dev/scripts  -> NOT mounted  (developer-only)
+#
+# Usage:
+#   docker compose up -d
+#   docker compose down
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 30s
+
+services: {}
+  # Add services here. Example:
+  #
+  # bitcoin:
+  #   build:
+  #     context: .
+  #     dockerfile: services/bitcoin/dockerfile
+  #   container_name: quantroot-bitcoin
+  #   env_file: .env
+  #   volumes:
+  #     - ./scripts:/dscript:ro
+  #     - ./data/bitcoin:/data
+  #   logging: *default-logging
+  #   healthcheck:
+  #     <<: *healthcheck-defaults
+  #     test: ["CMD", "curl", "-f", "http://localhost:18443/"]

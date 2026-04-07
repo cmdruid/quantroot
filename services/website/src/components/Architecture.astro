@@ -1,0 +1,51 @@
+---
+const decisions = [
+  {
+    question: "Why OP_NOP4 instead of OP_SUCCESSx?",
+    answer:
+      "OP_SUCCESSx triggers an unconditional script success in a pre-execution scan — Schnorr checks would never run on non-upgraded nodes. OP_NOP4 redefinition (the CLTV/CSV precedent) lets existing Schnorr checks execute normally, maintaining security during activation.",
+  },
+  {
+    question: "Why is sha_annex omitted from the SPHINCS+ sighash?",
+    answer:
+      "SPHINCS+ signatures live in the annex. Including sha_annex in the sighash creates a circular dependency (the signature would hash itself). The annex bit in spend_type is still set (0x03) for domain separation, and Schnorr's sighash still includes sha_annex, locking annex contents.",
+  },
+  {
+    question: "Why standard SLH-DSA over the smaller W+C variant?",
+    answer:
+      "Standard FIPS 205 algorithms (WOTS+, FORS) are fully NIST-reviewed with the same security level. W+C_P+FP saves ~670 bytes per signature and is documented as a drop-in future optimization in the BIP addendum.",
+  },
+  {
+    question: "Why disable bare-key spending?",
+    answer:
+      "Bare-key outputs can't verify the internal key against the tweak — they would completely undermine the NUMS ban. BIP 341 already recommends against bare keys, wallets don't create them, and BIP 9 activation gives time to migrate.",
+  },
+];
+---
+
+<section class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Design Decisions
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        Key architectural choices behind the soft-fork design.
+      </p>
+    </div>
+
+    <div class="mx-auto max-w-3xl space-y-4">
+      {decisions.map((d) => (
+        <details class="group rounded-xl border border-border bg-surface-raised transition-colors hover:border-quantum/30">
+          <summary class="cursor-pointer px-6 py-5 text-left font-medium select-none list-none flex items-center justify-between">
+            {d.question}
+            <span class="ml-4 text-text-secondary transition-transform group-open:rotate-45 text-xl leading-none">+</span>
+          </summary>
+          <div class="px-6 pb-5 leading-relaxed text-text-secondary">
+            {d.answer}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

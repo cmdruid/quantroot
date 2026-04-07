@@ -1,0 +1,59 @@
+---
+const steps = [
+  {
+    number: "01",
+    title: "Create Taproot Outputs Today",
+    description:
+      "Add a hidden hybrid tapleaf to your Taproot outputs. The tapleaf requires both Schnorr and SPHINCS+ signatures, ensuring pre-activation safety — OP_CHECKSIG is always enforced.",
+    detail: "Zero on-chain overhead. Your transactions look identical to any other Taproot spend.",
+  },
+  {
+    number: "02",
+    title: "Spend Normally with Key-Path",
+    description:
+      "Use fast Schnorr key-path spends as usual (~64 bytes). The hybrid tapleaf is never revealed on-chain.",
+    detail: "Post-BIP 368: key-path includes an annex disclosing the internal key (~130 bytes total). Still more efficient than script-path.",
+  },
+  {
+    number: "03",
+    title: "Quantum Threat Emerges",
+    description:
+      "If quantum computers advance to threaten elliptic-curve cryptography, the community activates the soft fork via BIP 9 signaling.",
+    detail: "BIP 368 hardens key-path spends. BIP 369 enables SPHINCS+ verification. Both must activate together.",
+  },
+  {
+    number: "04",
+    title: "Redeem via Hybrid Tapleaf",
+    description:
+      "Spend through the hybrid tapleaf using both SPHINCS+ and Schnorr signatures. An attacker must break both simultaneously.",
+    detail: "SPHINCS+ (SLH-DSA) relies only on hash function security — no elliptic curves. 4,080-byte signature carried in the annex.",
+  },
+];
+---
+
+<section id="how-it-works" class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Quantum Insurance for Your Bitcoin
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        Protect your funds against future quantum threats with a strategy you can
+        deploy today — at zero cost.
+      </p>
+    </div>
+
+    <div class="grid gap-8 md:grid-cols-2">
+      {steps.map((step) => (
+        <div class="group rounded-xl border border-border bg-surface-raised p-6 transition-colors hover:border-quantum/40">
+          <div class="mb-3 flex items-center gap-3">
+            <span class="font-mono text-sm font-medium text-quantum">{step.number}</span>
+            <h3 class="text-lg font-semibold">{step.title}</h3>
+          </div>
+          <p class="mb-3 leading-relaxed text-text-secondary">{step.description}</p>
+          <p class="text-sm text-text-secondary/70 italic">{step.detail}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

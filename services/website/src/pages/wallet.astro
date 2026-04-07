@@ -1,0 +1,252 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout title="Quantroot Wallet Guide">
+  <Nav />
+  <main class="pt-32 pb-20">
+    <div class="mx-auto max-w-3xl px-6">
+      <h1 class="mb-8 text-4xl font-bold tracking-tight">Wallet Setup Guide</h1>
+
+      <p class="mb-8 text-lg leading-relaxed text-text-secondary">
+        This guide walks you through setting up a quantum-insured Bitcoin wallet
+        using the Quantroot soft-fork implementation. All commands use
+        <code class="text-text-primary">bitcoin-cli</code> on regtest.
+      </p>
+
+      <!-- Step 1 -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">1. Create a Wallet</h2>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest createwallet "quantum"</div>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">2. Create a SPHINCS+ Key</h2>
+        <p class="mb-4 text-text-secondary">
+          Derives a SPHINCS+ keypair from the wallet's master key and registers
+          a quantum-insured descriptor. The key is deterministic &mdash;
+          recoverable from the wallet seed.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest createsphincskey</div>
+          <div class="mt-2 text-quantum">
+            &#123; "sphincs_pubkey": "ab12...ef34", "qi_descriptor": "qr(Q1.../0/*)" &#125;
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">3. Generate a Quantum-Insured Address</h2>
+        <p class="mb-4 text-text-secondary">
+          Addresses use a hybrid tapleaf: both Schnorr and SPHINCS+ signatures
+          are required in the emergency spending path. Normal spending uses
+          efficient key-path (~64 bytes).
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest getnewaddress "" bech32m</div>
+          <div class="mt-2 text-btc-orange">bcrt1p...</div>
+        </div>
+        <p class="mt-4 text-sm text-text-secondary">
+          The address is a standard Taproot (bech32m) address &mdash;
+          indistinguishable from any other Taproot output on-chain.
+        </p>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">4. Export the Quantum-Insured Extended Key</h2>
+        <p class="mb-4 text-text-secondary">
+          Export a <code class="text-text-primary">qpub</code> for watch-only
+          wallets, or <code class="text-text-primary">qprv</code> for full
+          backup. Both encode the BIP 32 key hierarchy plus the SPHINCS+ key.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest exportqpub</div>
+          <div class="mt-2 text-quantum">&#123; "qpub": "Q1CFYH..." &#125;</div>
+        </div>
+      </section>
+
+      <!-- Step 5 -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">5. Import into a Watch-Only Wallet</h2>
+        <p class="mb-4 text-text-secondary">
+          A watch-only wallet tracks incoming payments to all QI addresses
+          derived from the qpub, without access to private keys.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest createwallet "watchonly" true true</div>
+          <div class="text-text-secondary">$ bitcoin-cli -regtest -rpcwallet=watchonly importqpub "Q1CFYH..."</div>
+        </div>
+      </section>
+
+      <!-- Hybrid Script -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">Hybrid Script Anatomy</h2>
+        <p class="mb-4 text-text-secondary">
+          Each quantum-insured address contains a single hybrid tapleaf:
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div>&lt;sphincs_pk&gt; <span class="text-quantum">OP_CHECKSPHINCSVERIFY</span> OP_DROP &lt;schnorr_pk&gt; <span class="text-btc-orange">OP_CHECKSIG</span></div>
+        </div>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border border-border p-4">
+            <div class="mb-2 flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-btc-orange"></span>
+              <span class="text-sm font-semibold text-text-secondary">Normal Operation</span>
+            </div>
+            <p class="text-sm text-text-secondary">Key-path spend with Schnorr signature (~64 bytes). The hybrid leaf is never revealed.</p>
+          </div>
+          <div class="rounded-lg border border-border p-4">
+            <div class="mb-2 flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-quantum"></span>
+              <span class="text-sm font-semibold text-text-secondary">Quantum Emergency</span>
+            </div>
+            <p class="text-sm text-text-secondary">Script-path spend requiring both SPHINCS+ and Schnorr signatures. An attacker must break both.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RPCs -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">Available RPCs</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left text-text-secondary">
+                <th class="pb-2 pr-4 font-medium">Command</th>
+                <th class="pb-2 font-medium">Description</th>
+              </tr>
+            </thead>
+            <tbody class="text-text-secondary">
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">createsphincskey</td><td>Derive SPHINCS+ key and register QI descriptor</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">getquantumaddress</td><td>Derive a quantum-insured Taproot address</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">listsphincskeys</td><td>List all SPHINCS+ keys in the wallet</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">exportqpub</td><td>Export quantum-insured extended public key (Q1...)</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">importqpub</td><td>Import qpub as watch-only QI descriptor</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">exportqprv</td><td>Export quantum-insured extended private key</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">importqprv</td><td>Import qprv with full signing capability</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <!-- Extended Keys -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">6. Quantum-Insured Extended Keys</h2>
+        <p class="mb-4 text-text-secondary">
+          The <code class="text-text-primary">qpub</code> and <code class="text-text-primary">qprv</code>
+          formats extend BIP 32 extended keys with SPHINCS+ key material, enabling
+          watch-only wallets and full backups.
+        </p>
+        <div class="overflow-x-auto mb-4">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left text-text-secondary">
+                <th class="pb-2 pr-4 font-medium">Format</th>
+                <th class="pb-2 pr-4 font-medium">Size</th>
+                <th class="pb-2 pr-4 font-medium">Prefix</th>
+                <th class="pb-2 font-medium">Contains</th>
+              </tr>
+            </thead>
+            <tbody class="text-text-secondary">
+              <tr class="border-b border-border">
+                <td class="py-2 pr-4 font-mono text-text-primary">qpub</td>
+                <td class="py-2 pr-4">110 bytes</td>
+                <td class="py-2 pr-4 font-mono">Q1... / T4...</td>
+                <td class="py-2">BIP 32 xpub + 32B SPHINCS+ pubkey</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="py-2 pr-4 font-mono text-text-primary">qprv</td>
+                <td class="py-2 pr-4">142 bytes</td>
+                <td class="py-2 pr-4 font-mono">Q1... / T5...</td>
+                <td class="py-2">BIP 32 xprv + 64B SPHINCS+ secret</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-sm text-text-secondary">
+          A watch-only wallet holding a <code class="text-text-primary">qpub</code> can
+          derive all quantum-insured addresses without private key access.
+        </p>
+      </section>
+
+      <!-- Seed-Derived Keys -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">7. Seed-Derived SPHINCS+ Keys</h2>
+        <p class="mb-4 text-text-secondary">
+          The SPHINCS+ key is derived deterministically from the wallet's master
+          extended key, so your mnemonic phrase is the <strong class="text-text-primary">only backup you need</strong>.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">HMAC-SHA512(<span class="text-quantum">"Sphincs seed"</span>, master_ext_privkey || account_path)</div>
+          <div class="mt-1 text-text-secondary">&rarr; sk_seed[0:16] || sk_prf[16:32] || pk_seed[32:48]</div>
+        </div>
+        <p class="mt-4 text-sm text-text-secondary">
+          Account path: <code class="text-text-primary">m/395'/coin_type'/account'</code>.
+          One SPHINCS+ key per account. Stateless &mdash; key reuse does not weaken security.
+        </p>
+      </section>
+
+      <!-- Encrypted Wallets -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">8. Encrypted Wallet Support</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left text-text-secondary">
+                <th class="pb-2 pr-4 font-medium">Operation</th>
+                <th class="pb-2 pr-4 font-medium">Locked</th>
+                <th class="pb-2 font-medium">Unlocked</th>
+              </tr>
+            </thead>
+            <tbody class="text-text-secondary">
+              <tr class="border-b border-border"><td class="py-2 pr-4">createsphincskey</td><td class="py-2 pr-4 text-btc-orange">Fails</td><td class="py-2 text-quantum">Works</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4">listsphincskeys</td><td class="py-2 pr-4 text-quantum">Works</td><td class="py-2 text-quantum">Works</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4">getquantumaddress</td><td class="py-2 pr-4 text-quantum">Works</td><td class="py-2 text-quantum">Works</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4">exportqpub</td><td class="py-2 pr-4 text-quantum">Works</td><td class="py-2 text-quantum">Works</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4">exportqprv</td><td class="py-2 pr-4 text-btc-orange">Fails</td><td class="py-2 text-quantum">Works</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4">Spending</td><td class="py-2 pr-4 text-btc-orange">Fails</td><td class="py-2 text-quantum">Works</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- qr() Descriptor -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">9. Descriptor Syntax</h2>
+        <p class="mb-4 text-text-secondary">
+          The <code class="text-text-primary">qr()</code> descriptor is a drop-in replacement
+          for <code class="text-text-primary">tr()</code> that auto-constructs the hybrid
+          SPHINCS+ tapleaf from a <code class="text-text-primary">qpub</code>.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed mb-4">
+          <div class="text-text-secondary"><span class="text-quantum">qr</span>(Q1.../0/*)</div>
+        </div>
+        <p class="text-sm text-text-secondary mb-2">
+          For advanced use with custom Taproot trees, the <code class="text-text-primary">qis()</code>
+          fragment is also available:
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed mb-4">
+          <div class="text-text-secondary">tr(xpub/0/*, <span class="text-quantum">qis</span>(<span class="text-quantum">SPHINCS_HEX</span>, xpub/0/*))</div>
+        </div>
+        <p class="text-sm text-text-secondary mb-2">
+          Both expand to the same hybrid script:
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div>&lt;<span class="text-quantum">SPHINCS_HEX</span>&gt; OP_CHECKSPHINCSVERIFY OP_DROP &lt;<span class="text-btc-orange">EC_KEY</span>&gt; OP_CHECKSIG</div>
+        </div>
+        <p class="mt-4 text-sm text-text-secondary">
+          When registered as the active BECH32M descriptor,
+          <code class="text-text-primary">getnewaddress bech32m</code> automatically
+          produces quantum-insured addresses.
+        </p>
+      </section>
+    </div>
+  </main>
+  <Footer />
+</Layout>

@@ -1,0 +1,8 @@
+[submodule "repos/bitcoin"]
+	path = repos/bitcoin
+	url = git@github.com:cmdruid/bitcoin.git
+	branch = quantroot
+[submodule "repos/bips"]
+	path = repos/bips
+	url = git@github.com:cmdruid/bips.git
+	branch = quantroot

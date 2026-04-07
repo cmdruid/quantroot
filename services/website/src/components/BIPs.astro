@@ -1,0 +1,99 @@
+---
+const bips = [
+  {
+    number: "BIP 368",
+    title: "Key-Path Hardening",
+    tag: "Key-path protection",
+    tagClass: "bg-btc-orange/10 text-btc-orange",
+    dotClass: "bg-btc-orange",
+    points: [
+      "Requires internal key disclosure in the annex (type byte 0x02)",
+      "Bans NUMS points to prevent quantum key-path forgery",
+      "Disables bare-key spending post-activation",
+      "Co-activation required — BIP 369 cannot activate without BIP 368",
+      "Mempool policy: script-path spends can't be replaced by key-path",
+    ],
+  },
+  {
+    number: "BIP 369",
+    title: "OP_CHECKSPHINCSVERIFY",
+    tag: "Script-path protection",
+    tagClass: "bg-quantum/10 text-quantum",
+    dotClass: "bg-quantum",
+    points: [
+      "New Tapscript opcode (0xB3) for SPHINCS+ signature verification",
+      "Signatures carried in Taproot annex (type byte 0x04, 4,080 bytes each)",
+      "Uses NIST FIPS 205 SLH-DSA with custom Bitcoin parameter set",
+      "Redefines OP_NOP4 — old nodes see a no-op, new nodes enforce verification",
+      "Hybrid script always requires Schnorr — safe pre-activation",
+    ],
+  },
+  {
+    number: "BIP 395",
+    title: "QI Extended Keys",
+    tag: "Wallet layer",
+    tagClass: "bg-quantum/10 text-quantum",
+    dotClass: "bg-quantum",
+    points: [
+      "Extends BIP 32 with SPHINCS+ key material (qpub 110 bytes, qprv 142 bytes)",
+      "Watch-only wallets derive all QI addresses from a single qpub",
+      "SPHINCS+ key derived from master seed — mnemonic-only backup",
+      "Purpose index 395' with per-account key isolation",
+      "Base58 prefix: Q1... (mainnet), T4... (testnet)",
+    ],
+  },
+  {
+    number: "BIP 377",
+    title: "PSBT Extensions",
+    tag: "Wallet layer",
+    tagClass: "bg-btc-orange/10 text-btc-orange",
+    dotClass: "bg-btc-orange",
+    points: [
+      "New PSBT fields for SPHINCS+ pubkeys, signatures, and annex data",
+      "Two-round signing: SPHINCS+ first, build annex, then Schnorr",
+      "Fields are transport-only — consensus validates the final transaction",
+      "Annex types 0x02 (key-path) and 0x04 (script-path) mutually exclusive",
+      "Compatible with existing BIP 174/371 PSBT workflows",
+    ],
+  },
+];
+---
+
+<section id="bips" class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-16 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Four Companion BIPs
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        Two consensus-layer BIPs for post-quantum protection, plus two
+        wallet-layer BIPs for key management and signing workflows.
+        BIP 369 requires BIP 368 co-activation.
+      </p>
+    </div>
+
+    <div class="grid gap-8 md:grid-cols-2">
+      {bips.map((bip) => (
+        <div class="rounded-xl border border-border bg-surface-raised p-8">
+          <div class="mb-4">
+            <span class:list={["mb-2 inline-block rounded-full px-3 py-1 text-xs font-medium", bip.tagClass]}>
+              {bip.tag}
+            </span>
+            <h3 class="text-2xl font-bold">
+              <span class="text-text-secondary">{bip.number}:</span>{" "}
+              <span class="font-mono text-xl">{bip.title}</span>
+            </h3>
+          </div>
+          <ul class="space-y-3">
+            {bip.points.map((point) => (
+              <li class="flex items-start gap-3 text-sm leading-relaxed text-text-secondary">
+                <span class:list={["mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", bip.dotClass]} />
+                {point}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

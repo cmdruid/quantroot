@@ -1,0 +1,60 @@
+---
+
+---
+
+<section class="border-t border-border py-16 md:py-20">
+  <div class="mx-auto max-w-3xl px-6">
+    <div class="mb-8 text-center">
+      <h2 class="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
+        Get Started in 5 Commands
+      </h2>
+      <p class="text-text-secondary">
+        Set up a quantum-insured wallet on regtest. Both BIP 368 and BIP 369
+        are active from block 1.
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-border bg-surface-raised overflow-hidden">
+      <div class="border-b border-border px-5 py-3 flex items-center justify-between">
+        <span class="text-xs font-medium text-text-secondary">bitcoin-cli (regtest)</span>
+      </div>
+      <div class="px-6 py-5 font-mono text-sm leading-loose overflow-x-auto space-y-1">
+        <div>
+          <span class="text-text-secondary select-none mr-3">$</span>
+          <span class="text-text-primary">bitcoin-cli createwallet <span class="text-btc-orange">"quantum"</span></span>
+        </div>
+        <div>
+          <span class="text-text-secondary select-none mr-3">$</span>
+          <span class="text-text-primary">bitcoin-cli <span class="text-quantum">createsphincskey</span></span>
+        </div>
+        <div>
+          <span class="text-text-secondary select-none mr-3">$</span>
+          <span class="text-text-primary">bitcoin-cli <span class="text-quantum">getquantumaddress</span></span>
+        </div>
+        <div>
+          <span class="text-text-secondary select-none mr-3">$</span>
+          <span class="text-text-primary">bitcoin-cli <span class="text-quantum">exportqpub</span></span>
+        </div>
+        <div>
+          <span class="text-text-secondary select-none mr-3">$</span>
+          <span class="text-text-primary">bitcoin-cli <span class="text-quantum">listsphincskeys</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-3">
+      <div class="rounded-lg border border-border p-4 text-center">
+        <div class="mb-1 font-mono text-2xl font-bold text-quantum">7</div>
+        <div class="text-xs text-text-secondary">New RPCs</div>
+      </div>
+      <div class="rounded-lg border border-border p-4 text-center">
+        <div class="mb-1 font-mono text-2xl font-bold text-btc-orange">170</div>
+        <div class="text-xs text-text-secondary">Tests Passing</div>
+      </div>
+      <div class="rounded-lg border border-border p-4 text-center">
+        <div class="mb-1 font-mono text-2xl font-bold text-text-primary">0</div>
+        <div class="text-xs text-text-secondary">Breaking Changes</div>
+      </div>
+    </div>
+  </div>
+</section>
