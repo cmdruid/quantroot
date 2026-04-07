@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://cmdruid.github.io',
-  base: '/quantroot/',
+  site: 'https://www.quantroot.org',
+  base: '/',
   vite: {
     plugins: [tailwindcss()]
   }
