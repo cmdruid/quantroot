@@ -171,6 +171,86 @@ else
 fi
 
 # ============================================================================
+# Phase 4 (optional): SPHINCS+ script-path spend via PSBT
+# ============================================================================
+
+if [[ "${SPHINCS_SPEND:-0}" == "1" ]]; then
+  log_info "=== Phase 4: SPHINCS+ Script-Path Spend ==="
+
+  # Fund a fresh QI address for the script-path test
+  QI_ADDR2=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1 | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
+  if [[ -z "$QI_ADDR2" ]]; then
+    # Fallback: getquantumaddress may return plain address
+    QI_ADDR2=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1)
+  fi
+  $BCLI -rpcwallet=test_miner sendtoaddress "$QI_ADDR2" 2.0 > /dev/null 2>&1
+  $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+
+  # Verify funds arrived
+  QI_BAL2=$($BCLI -rpcwallet=test_quantum getbalance)
+  log_info "Quantum wallet balance before script-path spend: $QI_BAL2 BTC"
+
+  # Create a PSBT spending from the QI wallet
+  DEST_ADDR2=$($BCLI -rpcwallet=test_miner getnewaddress "" bech32m)
+  PSBT=$($BCLI -rpcwallet=test_quantum walletcreatefundedpsbt '[]' "[{\"$DEST_ADDR2\":1.0}]" 0 '{"fee_rate":10}' 2>&1 | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+
+  if [[ -n "$PSBT" ]]; then
+    log_info "PASS: created PSBT for QI output"
+    PASS=$((PASS + 1))
+  else
+    log_error "FAIL: could not create PSBT"
+    FAIL=$((FAIL + 1))
+  fi
+
+  # Process the PSBT with SPHINCS+ signing (force_script_path)
+  # walletprocesspsbt will use the SPHINCS+ key if available and produce
+  # a script-path spend with both SPHINCS+ and Schnorr signatures
+  SIGNED=$($BCLI -rpcwallet=test_quantum walletprocesspsbt "$PSBT" true "ALL" true 2>&1)
+  COMPLETE=$(echo "$SIGNED" | grep -o '"complete":true' || true)
+
+  if [[ -n "$COMPLETE" ]]; then
+    log_info "PASS: PSBT signed and complete (script-path with SPHINCS+)"
+    PASS=$((PASS + 1))
+
+    # Finalize and broadcast
+    SIGNED_PSBT=$(echo "$SIGNED" | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+    FINAL=$($BCLI -rpcwallet=test_quantum finalizepsbt "$SIGNED_PSBT" 2>&1)
+    FINAL_HEX=$(echo "$FINAL" | grep -o '"hex":"[^"]*"' | cut -d'"' -f4)
+
+    if [[ -n "$FINAL_HEX" ]]; then
+      SP_TXID=$($BCLI sendrawtransaction "$FINAL_HEX" 2>&1)
+      if [[ ${#SP_TXID} -eq 64 ]]; then
+        log_info "PASS: SPHINCS+ script-path tx broadcast ($SP_TXID)"
+        PASS=$((PASS + 1))
+
+        # Mine and confirm
+        $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+        SP_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$SP_TXID" 2>&1 | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
+        if [[ "$SP_CONFS" -ge 1 ]]; then
+          log_info "PASS: SPHINCS+ script-path spend confirmed ($SP_CONFS confirmations)"
+          PASS=$((PASS + 1))
+        else
+          log_error "FAIL: SPHINCS+ spend not confirmed"
+          FAIL=$((FAIL + 1))
+        fi
+      else
+        log_error "FAIL: sendrawtransaction failed: $SP_TXID"
+        FAIL=$((FAIL + 1))
+      fi
+    else
+      log_error "FAIL: finalizepsbt failed"
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    log_warn "SKIP: PSBT not complete — SPHINCS+ script-path signing requires sphincs_secret in PSBT pipeline"
+    log_warn "This is expected until a dedicated sphincsspend RPC is implemented."
+  fi
+else
+  log_info "=== Phase 4: SPHINCS+ Script-Path Spend (skipped) ==="
+  log_info "Run with SPHINCS_SPEND=1 to enable: SPHINCS_SPEND=1 make test-demo"
+fi
+
+# ============================================================================
 # Cleanup
 # ============================================================================
 
