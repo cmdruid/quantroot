@@ -112,6 +112,29 @@ import Footer from "../components/Footer.astro";
         </div>
       </section>
 
+      <!-- Emergency Spending -->
+      <section class="mb-12">
+        <h2 class="mb-4 text-2xl font-bold">Emergency Spending</h2>
+        <p class="mb-4 text-text-secondary">
+          If a quantum threat emerges and the soft fork activates, use
+          <code class="text-text-primary">sphincsspend</code> to spend through
+          the hybrid tapleaf with both SPHINCS+ and Schnorr signatures.
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed mb-4">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest <span class="text-quantum">sphincsspend</span> <span class="text-btc-orange">"bcrt1p..."</span> 1.0</div>
+        </div>
+        <p class="mb-2 text-sm text-text-secondary">
+          Omit the amount to sweep all quantum-insured funds:
+        </p>
+        <div class="rounded-lg bg-surface-raised p-5 font-mono text-sm leading-relaxed">
+          <div class="text-text-secondary">$ bitcoin-cli -regtest <span class="text-quantum">sphincsspend</span> <span class="text-btc-orange">"bcrt1p..."</span></div>
+        </div>
+        <p class="mt-4 text-sm text-text-secondary">
+          Only quantum-insured UTXOs are selected. The wallet produces a script-path
+          witness with both signatures and a 4,083-byte annex.
+        </p>
+      </section>
+
       <!-- RPCs -->
       <section class="mb-12">
         <h2 class="mb-4 text-2xl font-bold">Available RPCs</h2>
@@ -131,6 +154,7 @@ import Footer from "../components/Footer.astro";
               <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">importqpub</td><td>Import qpub as watch-only QI descriptor</td></tr>
               <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">exportqprv</td><td>Export quantum-insured extended private key</td></tr>
               <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">importqprv</td><td>Import qprv with full signing capability</td></tr>
+              <tr class="border-b border-border"><td class="py-2 pr-4 font-mono text-text-primary">sphincsspend</td><td>Emergency SPHINCS+ script-path spend (supports sweep)</td></tr>
             </tbody>
           </table>
         </div>

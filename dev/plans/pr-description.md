@@ -27,15 +27,22 @@ post-quantum signatures.
   the hybrid SPHINCS+ tapleaf: `qr(qpub/0/*)`
 - **`qis()` Descriptor**: Low-level script fragment for advanced users who
   need custom Taproot trees with SPHINCS+ leaves
-- **7 New RPCs**: `createsphincskey`, `getquantumaddress`, `exportqpub`,
-  `importqpub`, `exportqprv`, `importqprv`, `listsphincskeys`
+- **8 New RPCs**: `createsphincskey`, `getquantumaddress`, `exportqpub`,
+  `importqpub`, `exportqprv`, `importqprv`, `listsphincskeys`, `sphincsspend`
 - **Full spend cycle**: Create wallet → generate QI address → receive funds →
   key-path spend with BIP 368 annex → confirmed on chain
+- **Emergency spend cycle**: `sphincsspend` → QI UTXO selection → SPHINCS+
+  script-path spend with hybrid tapleaf → confirmed on chain
 
 ### Signing Pipeline
 - Annex-aware Schnorr sighash (`sha_annex` included when annex present)
 - BIP 368 key-path annex auto-construction (34/66 bytes, type `0x02`)
 - SPHINCS+ pre-signing in `SignTaproot` for hybrid scripts (type `0x04`)
+- Hybrid script fallback: direct Schnorr signing when miniscript can't parse
+  the `OP_CHECKSPHINCSVERIFY` hybrid pattern
+- `walletprocesspsbt` accepts `sphincs_emergency` flag for PSBT workflows
+- Two-pass SPKM iteration: SPHINCS+ SPKMs sign first when emergency mode set
+- Activation-aware verification flags for SPHINCS+ script-path witnesses
 - Activation-aware: annex only included when BIP 368 deployment is active
 
 ### Consensus
