@@ -1,0 +1,47 @@
+---
+const points = [
+  {
+    title: "Forward Compatible",
+    description:
+      "Valid under today's consensus rules. The hybrid construction uses only existing opcodes \u2014 no soft fork needed to start protecting your funds.",
+    tone: "btc-orange",
+  },
+  {
+    title: "Invisible On-Chain",
+    description:
+      "Quantum-insured outputs are standard bech32m Taproot. The hybrid leaf is a hash in the script tree — never revealed during normal spending.",
+    tone: "quantum",
+  },
+  {
+    title: "Instant Protection",
+    description:
+      "When the soft fork activates, existing outputs are already covered. No migration, no sweeping — SPHINCS+ enforcement kicks in immediately.",
+    tone: "btc-orange",
+  },
+];
+---
+
+<section class="border-t border-border py-20 md:py-28">
+  <div class="mx-auto max-w-5xl px-6">
+    <div class="mb-14 text-center">
+      <h2 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+        Deploy Today, Activate Later
+      </h2>
+      <p class="mx-auto max-w-2xl text-text-secondary">
+        Forward-compatible with current Bitcoin consensus. Create quantum-insured
+        outputs on mainnet today &mdash; no soft fork required until a quantum
+        threat emerges.
+      </p>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-3">
+      {points.map((point) => (
+        <div class="rounded-xl border border-border bg-surface-raised p-6 text-center">
+          <div class={`mx-auto mb-4 h-1 w-10 rounded-full ${point.tone === "quantum" ? "bg-quantum" : "bg-btc-orange"}`}></div>
+          <h3 class="mb-3 text-lg font-semibold">{point.title}</h3>
+          <p class="text-sm leading-relaxed text-text-secondary">{point.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

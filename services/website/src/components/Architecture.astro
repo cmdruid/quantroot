@@ -11,9 +11,9 @@ const decisions = [
       "SPHINCS+ signatures live in the annex. Including sha_annex in the sighash creates a circular dependency (the signature would hash itself). The annex bit in spend_type is still set (0x03) for domain separation, and Schnorr's sighash still includes sha_annex, locking annex contents.",
   },
   {
-    question: "Why standard SLH-DSA over the smaller W+C variant?",
+    question: "Why standard FIPS 205 over the smaller experimental variant?",
     answer:
-      "Standard FIPS 205 algorithms (WOTS+, FORS) are fully NIST-reviewed with the same security level. W+C_P+FP saves ~670 bytes per signature and is documented as a drop-in future optimization in the BIP addendum.",
+      "The standard SLH-DSA algorithms (WOTS+, FORS) are fully NIST-reviewed at the same security level. An experimental variant called W+C_P+FP saves ~670 bytes per signature but has not undergone the same review. It is documented as a drop-in future optimization in the BIP addendum.",
   },
   {
     question: "Why disable bare-key spending?",
