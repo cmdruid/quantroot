@@ -11,7 +11,7 @@ COMPOSE       := docker compose
 COMPOSE_FILE  := compose.yml
 PROJECT       := quantroot
 
-CORE_SERVICES :=
+CORE_SERVICES := bitcoin
 # OPT_SERVICES :=
 
 ifeq ($(ALL),1)
@@ -114,9 +114,45 @@ test-smoke: ## Run fast smoke tests
 test-e2e: ## Run full E2E test suite
 	./test/scripts/test-e2e.sh
 
+.PHONY: test-demo
+test-demo: ## Run demo environment E2E test (requires: make build-bitcoin && make start BG=1)
+	./test/scripts/test-demo.sh
+
 .PHONY: test-check
 test-check: ## Verify test workspace integrity
 	./test/scripts/check-e2e-workspace.sh
+
+# ---------------------------------------------------------------------------
+# Bitcoin build & GUI
+# ---------------------------------------------------------------------------
+
+.PHONY: build-bitcoin
+build-bitcoin: ## Build Bitcoin Core binaries and extract to build/bitcoin/bin/
+	@mkdir -p build/bitcoin
+	docker build \
+		--target=export \
+		--output=type=local,dest=build/bitcoin \
+		-f services/bitcoin/Dockerfile .
+
+.PHONY: qt-regtest
+qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node)
+	./build/bitcoin/bin/bitcoin-qt -regtest -addnode=127.0.0.1:18444
+
+.PHONY: qt-mainnet
+qt-mainnet: ## Launch bitcoin-qt (mainnet, public peers)
+	./build/bitcoin/bin/bitcoin-qt
+
+.PHONY: qt-testnet
+qt-testnet: ## Launch bitcoin-qt (testnet, public peers)
+	./build/bitcoin/bin/bitcoin-qt -testnet
+
+.PHONY: qt-signet
+qt-signet: ## Launch bitcoin-qt (signet, public peers)
+	./build/bitcoin/bin/bitcoin-qt -signet
+
+.PHONY: shell-bitcoin
+shell-bitcoin: ## Open a shell in the bitcoind container
+	docker exec -it quantroot-bitcoin /bin/bash
 
 # ---------------------------------------------------------------------------
 # Website

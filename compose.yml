@@ -21,19 +21,29 @@ x-healthcheck-defaults: &healthcheck-defaults
   retries: 3
   start_period: 30s
 
-services: {}
-  # Add services here. Example:
-  #
-  # bitcoin:
-  #   build:
-  #     context: .
-  #     dockerfile: services/bitcoin/dockerfile
-  #   container_name: quantroot-bitcoin
-  #   env_file: .env
-  #   volumes:
-  #     - ./scripts:/dscript:ro
-  #     - ./data/bitcoin:/data
-  #   logging: *default-logging
-  #   healthcheck:
-  #     <<: *healthcheck-defaults
-  #     test: ["CMD", "curl", "-f", "http://localhost:18443/"]
+services:
+  bitcoin:
+    build:
+      context: .
+      dockerfile: services/bitcoin/Dockerfile
+      target: runtime
+    container_name: quantroot-bitcoin
+    restart: unless-stopped
+    volumes:
+      - ./data/bitcoin:/data
+      - ./config/bitcoin:/config:ro
+    command: >
+      bitcoind
+        -conf=/config/regtest.conf
+        -datadir=/data
+        -printtoconsole
+    ports:
+      - "18443:18443"
+      - "18444:18444"
+      - "28332:28332"
+      - "28333:28333"
+    logging: *default-logging
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=quantroot",
+             "-rpcpassword=quantroot", "getblockchaininfo"]
