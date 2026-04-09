@@ -214,6 +214,90 @@ else
 fi
 
 # ============================================================================
+# Phase 5: PSBT key-path spend
+# ============================================================================
+
+log_info "=== Phase 5: PSBT Key-Path Spend ==="
+
+# Fund a QI address for PSBT test
+QI_ADDR3=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1 | tr -d ' \n' | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
+$BCLI -rpcwallet=test_miner sendtoaddress "$QI_ADDR3" 3.0 > /dev/null 2>&1
+$BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+
+# Step 1: Create funded PSBT
+DEST_PSBT=$($BCLI -rpcwallet=test_miner getnewaddress "" bech32m)
+PSBT_CREATE=$($BCLI -rpcwallet=test_quantum walletcreatefundedpsbt '[]' "[{\"$DEST_PSBT\":1.0}]" 0 '{"fee_rate":10}' 2>&1)
+PSBT=$(echo "$PSBT_CREATE" | tr -d ' \n' | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+if [[ -n "$PSBT" ]]; then
+  log_info "PASS: PSBT created"
+  PASS=$((PASS + 1))
+else
+  log_error "FAIL: walletcreatefundedpsbt failed: $PSBT_CREATE"
+  FAIL=$((FAIL + 1))
+fi
+
+# Step 2: Sign (key-path)
+PSBT_SIGNED=$($BCLI -rpcwallet=test_quantum walletprocesspsbt "$PSBT" 2>&1)
+PSBT_COMPLETE=$(echo "$PSBT_SIGNED" | tr -d ' \n' | grep -c '"complete":true' || true)
+if [[ "$PSBT_COMPLETE" -ge 1 ]]; then
+  log_info "PASS: PSBT key-path signed (complete)"
+  PASS=$((PASS + 1))
+
+  # Step 3: Finalize and broadcast
+  PSBT_HEX=$(echo "$PSBT_SIGNED" | tr -d ' \n' | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+  PSBT_FINAL=$($BCLI -rpcwallet=test_quantum finalizepsbt "$PSBT_HEX" 2>&1)
+  PSBT_TX=$(echo "$PSBT_FINAL" | tr -d ' \n' | grep -o '"hex":"[^"]*"' | cut -d'"' -f4)
+  PSBT_TXID=$($BCLI sendrawtransaction "$PSBT_TX" 2>&1)
+  if [[ ${#PSBT_TXID} -eq 64 ]]; then
+    $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+    PSBT_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$PSBT_TXID" 2>&1 | tr -d ' \n' | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
+    if [[ "$PSBT_CONFS" -ge 1 ]]; then
+      log_info "PASS: PSBT key-path spend confirmed ($PSBT_TXID)"
+      PASS=$((PASS + 1))
+    else
+      log_error "FAIL: PSBT key-path spend not confirmed"
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    log_error "FAIL: sendrawtransaction failed: $PSBT_TXID"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  log_error "FAIL: PSBT key-path signing incomplete: $PSBT_SIGNED"
+  FAIL=$((FAIL + 1))
+fi
+
+# ============================================================================
+# Phase 6: PSBT SPHINCS+ emergency spend
+# ============================================================================
+
+log_info "=== Phase 6: PSBT SPHINCS+ Emergency Spend ==="
+
+# Fund a QI address
+QI_ADDR4=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1 | tr -d ' \n' | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
+$BCLI -rpcwallet=test_miner sendtoaddress "$QI_ADDR4" 3.0 > /dev/null 2>&1
+$BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+
+# Step 1: Create funded PSBT
+DEST_SP=$($BCLI -rpcwallet=test_miner getnewaddress "" bech32m)
+PSBT_SP_CREATE=$($BCLI -rpcwallet=test_quantum walletcreatefundedpsbt '[]' "[{\"$DEST_SP\":1.0}]" 0 '{"fee_rate":10}' 2>&1)
+PSBT_SP=$(echo "$PSBT_SP_CREATE" | tr -d ' \n' | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+if [[ -n "$PSBT_SP" ]]; then
+  log_info "PASS: PSBT created for SPHINCS+ spend"
+  PASS=$((PASS + 1))
+else
+  log_error "FAIL: walletcreatefundedpsbt failed: $PSBT_SP_CREATE"
+  FAIL=$((FAIL + 1))
+fi
+
+# Step 2: PSBT SPHINCS+ signing requires sphincs_emergency=true (boolean param)
+# bitcoin-cli can't pass new boolean params positionally (passes as string).
+# This workflow is fully tested by wallet_sphincs_scriptpath.py and
+# wallet_sphincs_psbt.py via the Python test framework.
+# The sphincsspend RPC (Phase 4) covers the end-to-end emergency spend.
+log_info "SKIP: PSBT sphincs_emergency requires JSON-RPC (tested in functional tests)"
+
+# ============================================================================
 # Cleanup
 # ============================================================================
 
