@@ -57,10 +57,10 @@ SPHINCS+ uses NIST FIPS 205 SLH-DSA with a custom Bitcoin parameter set at NIST 
 
 | Category | Count |
 |----------|-------|
-| Consensus tests (BIP 368 + 369) | 56 |
+| Consensus tests (BIP 368 + 369) | 42 |
 | Wallet unit tests (key, qextkey, descriptor, DB) | 46 |
-| Functional tests (RPCs, PSBT, activation, script-path) | 59 |
-| **Total** | **161** |
+| Functional tests (RPCs, PSBT, activation, script-path) | 66 |
+| **Total** | **154** |
 
 ## Building from Source
 

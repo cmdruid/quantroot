@@ -33,15 +33,14 @@ services:
       - ./data/bitcoin:/data
       - ./config/bitcoin:/config:ro
     command: >
-      bitcoind
-        -conf=/config/regtest.conf
-        -datadir=/data
-        -printtoconsole
+      -conf=/config/regtest.conf
+      -datadir=/data
+      -printtoconsole
     ports:
-      - "18443:18443"
-      - "18444:18444"
-      - "28332:28332"
-      - "28333:28333"
+      - "19443:18443"
+      - "19444:18444"
+      - "29332:28332"
+      - "29333:28333"
     logging: *default-logging
     healthcheck:
       <<: *healthcheck-defaults

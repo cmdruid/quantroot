@@ -55,8 +55,13 @@ assert "bitcoind binary exists" \
 assert "bitcoin-cli binary exists" \
   test -x "$ROOT_DIR/build/bitcoin/bin/bitcoin-cli"
 
-assert "bitcoin-qt binary exists" \
-  test -x "$ROOT_DIR/build/bitcoin/bin/bitcoin-qt"
+# bitcoin-qt is built natively, not in Docker
+if [ -x "$ROOT_DIR/build/bitcoin/bin/bitcoin-qt" ]; then
+  log_info "PASS: bitcoin-qt binary exists"
+  PASS=$((PASS + 1))
+else
+  log_info "SKIP: bitcoin-qt not in Docker build (built natively)"
+fi
 
 assert "container is running" \
   docker inspect -f '{{.State.Running}}' "$CONTAINER"
@@ -74,8 +79,10 @@ assert_output "node is on regtest" \
 
 log_info "=== Phase 2: Wallet Operations ==="
 
-# Clean up any leftover wallet from a previous run
+# Clean up any leftover wallets from a previous run
 $BCLI unloadwallet "test_quantum" > /dev/null 2>&1 || true
+$BCLI unloadwallet "test_miner" > /dev/null 2>&1 || true
+docker exec "$CONTAINER" rm -rf /data/regtest/wallets/test_quantum /data/regtest/wallets/test_miner > /dev/null 2>&1 || true
 
 assert "createwallet succeeds" \
   $BCLI createwallet "test_quantum"
@@ -88,8 +95,9 @@ assert_output "listsphincskeys shows the key" \
   "sphincs_pubkey" \
   $BCLI -rpcwallet=test_quantum listsphincskeys
 
-# Get a quantum-insured address
-QI_ADDR=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1)
+# Get a quantum-insured address (returns JSON, extract address field)
+QI_ADDR_JSON=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1)
+QI_ADDR=$(echo "$QI_ADDR_JSON" | tr -d ' \n' | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
 if [[ "$QI_ADDR" == bcrt1p* ]]; then
   log_info "PASS: getquantumaddress returns bech32m address ($QI_ADDR)"
   PASS=$((PASS + 1))
@@ -161,7 +169,7 @@ fi
 $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
 
 # Verify the spend confirmed
-SPEND_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$SPEND_TXID" 2>&1 | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
+SPEND_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$SPEND_TXID" 2>&1 | tr -d " " | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
 if [[ "$SPEND_CONFS" -ge 1 ]]; then
   log_info "PASS: key-path spend confirmed ($SPEND_CONFS confirmations)"
   PASS=$((PASS + 1))
@@ -177,17 +185,14 @@ fi
 log_info "=== Phase 4: SPHINCS+ Emergency Spend ==="
 
 # Fund a QI address for the emergency spend test
-QI_ADDR2=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1 | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
-if [[ -z "$QI_ADDR2" ]]; then
-  QI_ADDR2=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1)
-fi
+QI_ADDR2=$($BCLI -rpcwallet=test_quantum getquantumaddress 2>&1 | tr -d ' \n' | grep -o '"address":"[^"]*"' | cut -d'"' -f4)
 $BCLI -rpcwallet=test_miner sendtoaddress "$QI_ADDR2" 2.0 > /dev/null 2>&1
 $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
 
 # Emergency spend via sphincsspend
 DEST_ADDR2=$($BCLI -rpcwallet=test_miner getnewaddress "" bech32m)
 SP_RESULT=$($BCLI -rpcwallet=test_quantum sphincsspend "$DEST_ADDR2" 1.0 2>&1)
-SP_TXID=$(echo "$SP_RESULT" | grep -o '"txid":"[^"]*"' | cut -d'"' -f4)
+SP_TXID=$(echo "$SP_RESULT" | tr -d ' \n' | grep -o '"txid":"[^"]*"' | cut -d'"' -f4)
 
 if [[ ${#SP_TXID} -eq 64 ]]; then
   log_info "PASS: sphincsspend returned txid ($SP_TXID)"
@@ -195,7 +200,7 @@ if [[ ${#SP_TXID} -eq 64 ]]; then
 
   # Mine and confirm
   $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
-  SP_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$SP_TXID" 2>&1 | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
+  SP_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$SP_TXID" 2>&1 | tr -d ' \n' | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
   if [[ "$SP_CONFS" -ge 1 ]]; then
     log_info "PASS: SPHINCS+ emergency spend confirmed ($SP_CONFS confirmations)"
     PASS=$((PASS + 1))
