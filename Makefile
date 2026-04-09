@@ -122,8 +122,9 @@ build-bitcoin: ## Build Bitcoin Core binaries (including bitcoin-qt) to build/bi
 		-f build/bitcoin/Dockerfile .
 
 .PHONY: qt-regtest
-qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node)
-	./build/bitcoin/bin/bitcoin-qt -regtest -addnode=127.0.0.1:19444
+qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node, data/demo-qt)
+	@mkdir -p data/demo-qt
+	./build/bitcoin/bin/bitcoin-qt -regtest -datadir=$(PWD)/data/demo-qt -addnode=127.0.0.1:19444
 
 .PHONY: qt-mainnet
 qt-mainnet: ## Launch bitcoin-qt (mainnet, public peers)
@@ -140,6 +141,12 @@ qt-signet: ## Launch bitcoin-qt (signet, public peers)
 .PHONY: shell-bitcoin
 shell-bitcoin: ## Open a shell in the bitcoind container
 	docker exec -it quantroot-bitcoin /bin/bash
+
+.PHONY: reset-demo
+reset-demo: ## Stop demo services and delete all demo data
+	$(COMPOSE) down -v --remove-orphans 2>/dev/null || true
+	rm -rf data/demo-node data/demo-qt
+	@echo "Demo data reset."
 
 # ---------------------------------------------------------------------------
 # Website

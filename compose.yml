@@ -30,7 +30,7 @@ services:
     container_name: quantroot-bitcoin
     restart: unless-stopped
     volumes:
-      - ./data/bitcoin:/data
+      - ./data/demo-node:/data
       - ./config/bitcoin:/config:ro
     command: >
       -conf=/config/regtest.conf

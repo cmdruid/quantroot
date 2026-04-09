@@ -15,6 +15,17 @@ make build-bitcoin
 
 This produces all binaries in `build/bitcoin/bin/` including `bitcoin-qt`.
 
+## Data Layout
+
+Each demo node gets its own data directory under `data/`:
+
+| Node | Data directory | Description |
+|------|---------------|-------------|
+| Docker container (`bitcoind`) | `data/demo-node/` | Regtest node for CLI demo |
+| Native GUI (`bitcoin-qt`) | `data/demo-qt/` | Separate regtest node for GUI demo |
+
+To reset all demo data: `make reset-demo`
+
 ---
 
 ## Option A: Docker + CLI Demo
