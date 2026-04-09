@@ -1,44 +1,59 @@
-# Test Infrastructure
+# Tests
 
-Top-level home for test infrastructure that crosses real service or repository
-boundaries.
+Cross-service tests for the Quantroot monorepo. Tests that validate a
+single repo's own code live in that repo (e.g., `repos/bitcoin/test/`).
 
-## Scope
+## Demo E2E Test
 
-Tests here validate behavior across multiple services or repos. If a test only
-validates one repo's own code, keep it in that repo.
+The primary test is the demo environment E2E (`test/scripts/test-demo.sh`),
+which exercises the full pipeline against a Docker-hosted regtest node:
 
-## Common Tasks
+```bash
+make build-bitcoin    # Build binaries (first time only)
+make start BG=1       # Start regtest container
+make test-demo        # Run all 6 phases (22 checks)
+make stop             # Clean up
+```
 
-| I want to... | Start here |
-|--------------|-----------|
-| Run the fast gate | `make test-smoke` |
-| Run full E2E | `make test-e2e` |
-| Debug a failing test | [docs/DEBUGGING.md](docs/DEBUGGING.md) |
-| Add a new test | [docs/OWNERSHIP.md](docs/OWNERSHIP.md) |
-| Understand test types | [docs/TAXONOMY.md](docs/TAXONOMY.md) |
+### Phases
 
-## Workspace Map
+| Phase | Checks | Coverage |
+|-------|--------|----------|
+| 1. Infrastructure | 5 | Binaries, container, regtest |
+| 2. Wallet Operations | 5 | createsphincskey, listsphincskeys, getquantumaddress, exportqpub |
+| 3. Key-Path Spend | 4 | Fund QI address, receive, key-path spend, confirm |
+| 4. SPHINCS+ Emergency | 2 | sphincsspend, confirm on-chain |
+| 5. PSBT Key-Path | 3 | walletcreatefundedpsbt, walletprocesspsbt, finalize + confirm |
+| 6. PSBT SPHINCS+ Emergency | 3 | PSBT creation, sphincs_emergency signing, confirm |
 
-- [docs/TAXONOMY.md](docs/TAXONOMY.md) — test type definitions and boundaries
-- [docs/POLICY.md](docs/POLICY.md) — gate definitions and signal strength
-- [docs/OWNERSHIP.md](docs/OWNERSHIP.md) — test placement rules
-- [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — testing and debugging flows
-- [docs/DEBUGGING.md](docs/DEBUGGING.md) — triage, health checks, recovery
-- [docs/e2e/README.md](docs/e2e/README.md) — E2E package layout
-- [docs/e2e/RUNBOOK.md](docs/e2e/RUNBOOK.md) — E2E execution guide
-- [docs/scripts/README.md](docs/scripts/README.md) — script routing table
+### Functional Tests (in repos/bitcoin)
 
-## Command Ladder
+These run directly against `test_bitcoin` without Docker:
 
-Ordered from fastest to most thorough:
+```bash
+cd repos/bitcoin
+python3 test/functional/wallet_sphincs.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_psbt.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_activation.py --configfile=build/test/config.ini
+python3 test/functional/wallet_sphincs_scriptpath.py --configfile=build/test/config.ini
+python3 test/functional/feature_sphincs.py --configfile=build/test/config.ini
+python3 test/functional/feature_keypath_hardening.py --configfile=build/test/config.ini
+```
 
-1. `make check` — static checks, doc consistency
-2. `make test-smoke` — stateful but fast service checks
-3. `make test-e2e` — full cross-service validation
+### Unit Tests (in repos/bitcoin)
 
-## Placement Rules
+```bash
+cd repos/bitcoin
+build/bin/test_bitcoin --run_test=sphincskeys_tests,qextkey_tests,qis_descriptor_tests,sphincskeys_db_tests
+```
 
-1. Test validates one repo only → keep it in that repo
-2. Test crosses service or repo boundaries → place it here
-3. Test is stateful and fast → classify as `smoke`, not `e2e`
+## Files
+
+```
+test/
+├── README.md                   This file
+└── scripts/
+    ├── lib/
+    │   └── common.sh           Shared bash helpers (colors, logging, wait_for_service)
+    └── test-demo.sh            Demo E2E test (6 phases, 22 checks)
+```

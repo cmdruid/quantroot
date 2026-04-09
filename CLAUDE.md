@@ -17,16 +17,14 @@ with `quantroot-`. Networking is internal via Docker Compose networks.
 | `make reset` | Stop and remove all runtime data |
 | `make health` | Check service health |
 | `make build` | Rebuild container images |
-| `make test-smoke` | Fast smoke tests |
-| `make test-e2e` | Full end-to-end test suite |
+| `make test-demo` | Demo E2E test (22 checks, 6 phases) |
 | `make check` | Static checks and doc consistency |
 | `make logs` | Follow all service logs |
 | `make logs-<svc>` | Follow a specific service's logs |
 
 ## Testing Expectations
 
-- **Primary gate**: `make test-e2e` — must pass before merge
-- **Fast gate**: `make test-smoke` — use during development
+- **Primary gate**: `make test-demo` — must pass before merge
 - **Static gate**: `make check` — doc consistency and lint
 
 ## Documentation and Workflow Rules

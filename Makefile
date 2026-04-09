@@ -106,21 +106,9 @@ check: ## Run static checks and doc consistency
 # Testing
 # ---------------------------------------------------------------------------
 
-.PHONY: test-smoke
-test-smoke: ## Run fast smoke tests
-	./test/scripts/test-smoke.sh
-
-.PHONY: test-e2e
-test-e2e: ## Run full E2E test suite
-	./test/scripts/test-e2e.sh
-
 .PHONY: test-demo
-test-demo: ## Run demo environment E2E test (requires: make build-bitcoin && make start BG=1)
+test-demo: ## Run demo E2E test (requires: make build-bitcoin && make start BG=1)
 	./test/scripts/test-demo.sh
-
-.PHONY: test-check
-test-check: ## Verify test workspace integrity
-	./test/scripts/check-e2e-workspace.sh
 
 # ---------------------------------------------------------------------------
 # Bitcoin build & GUI
