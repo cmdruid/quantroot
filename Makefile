@@ -123,7 +123,7 @@ build-bitcoin: ## Build Bitcoin Core binaries (including bitcoin-qt) to build/bi
 
 .PHONY: qt-regtest
 qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node)
-	./build/bitcoin/bin/bitcoin-qt -regtest -addnode=127.0.0.1:18444
+	./build/bitcoin/bin/bitcoin-qt -regtest -addnode=127.0.0.1:19444
 
 .PHONY: qt-mainnet
 qt-mainnet: ## Launch bitcoin-qt (mainnet, public peers)

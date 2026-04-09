@@ -18,7 +18,7 @@ NETWORK="${1:---mainnet}"
 
 case "$NETWORK" in
   --regtest)
-    exec "$QT_BIN" -regtest -addnode=127.0.0.1:18444
+    exec "$QT_BIN" -regtest -addnode=127.0.0.1:19444
     ;;
   --testnet)
     exec "$QT_BIN" -testnet
