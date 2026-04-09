@@ -127,12 +127,11 @@ test-check: ## Verify test workspace integrity
 # ---------------------------------------------------------------------------
 
 .PHONY: build-bitcoin
-build-bitcoin: ## Build Bitcoin Core binaries and extract to build/bitcoin/bin/
-	@mkdir -p build/bitcoin
+build-bitcoin: ## Build Bitcoin Core binaries (including bitcoin-qt) to build/bitcoin/bin/
 	docker build \
 		--target=export \
 		--output=type=local,dest=build/bitcoin \
-		-f services/bitcoin/Dockerfile .
+		-f build/bitcoin/Dockerfile .
 
 .PHONY: qt-regtest
 qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node)

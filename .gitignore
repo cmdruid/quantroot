@@ -1,5 +1,8 @@
 data/*
 build/*
+!build/bitcoin/
+build/bitcoin/*
+!build/bitcoin/Dockerfile
 bin/*
 logs/*
 local/*
