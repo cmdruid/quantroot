@@ -295,7 +295,36 @@ fi
 # This workflow is fully tested by wallet_sphincs_scriptpath.py and
 # wallet_sphincs_psbt.py via the Python test framework.
 # The sphincsspend RPC (Phase 4) covers the end-to-end emergency spend.
-log_info "SKIP: PSBT sphincs_emergency requires JSON-RPC (tested in functional tests)"
+# Sign with sphincs_emergency=true (6th positional param, registered in client.cpp)
+PSBT_SP_SIGNED=$($BCLI -rpcwallet=test_quantum walletprocesspsbt "$PSBT_SP" true "DEFAULT" true true true 2>&1)
+PSBT_SP_COMPLETE=$(echo "$PSBT_SP_SIGNED" | tr -d ' \n' | grep -c '"complete":true' || true)
+if [[ "$PSBT_SP_COMPLETE" -ge 1 ]]; then
+  log_info "PASS: PSBT SPHINCS+ emergency signed (complete)"
+  PASS=$((PASS + 1))
+
+  # Finalize and broadcast
+  PSBT_SP_HEX=$(echo "$PSBT_SP_SIGNED" | tr -d ' \n' | grep -o '"psbt":"[^"]*"' | cut -d'"' -f4)
+  PSBT_SP_FINAL=$($BCLI -rpcwallet=test_quantum finalizepsbt "$PSBT_SP_HEX" 2>&1)
+  PSBT_SP_TX=$(echo "$PSBT_SP_FINAL" | tr -d ' \n' | grep -o '"hex":"[^"]*"' | cut -d'"' -f4)
+  PSBT_SP_TXID=$($BCLI sendrawtransaction "$PSBT_SP_TX" 2>&1)
+  if [[ ${#PSBT_SP_TXID} -eq 64 ]]; then
+    $BCLI -rpcwallet=test_miner generatetoaddress 1 "$MINER_ADDR" > /dev/null 2>&1
+    PSBT_SP_CONFS=$($BCLI -rpcwallet=test_quantum gettransaction "$PSBT_SP_TXID" 2>&1 | tr -d ' \n' | grep -o '"confirmations":[0-9]*' | grep -o '[0-9]*')
+    if [[ "$PSBT_SP_CONFS" -ge 1 ]]; then
+      log_info "PASS: PSBT SPHINCS+ emergency spend confirmed ($PSBT_SP_TXID)"
+      PASS=$((PASS + 1))
+    else
+      log_error "FAIL: PSBT SPHINCS+ emergency spend not confirmed"
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    log_error "FAIL: sendrawtransaction failed: $PSBT_SP_TXID"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  log_error "FAIL: PSBT SPHINCS+ emergency signing incomplete: $PSBT_SP_SIGNED"
+  FAIL=$((FAIL + 1))
+fi
 
 # ============================================================================
 # Cleanup
