@@ -11,7 +11,7 @@ Naming, terminology, formatting, and code style conventions for Quantroot.
 | `dev/docs/` | `SCREAMING_SNAKE_CASE.md` | `CONVENTIONS.md`, `POLICY.md` |
 | Lifecycle docs (adr, reports, plans) | `kebab-case-YYYY-MM-DD.md` | `validator-boundary-2026-04-01.md` |
 | `services/`, `repos/` | `kebab-case` directories | `validator-ts/`, `core-lib/` |
-| Shell scripts | `kebab-case.sh` | `setup-dev.sh`, `test-e2e.sh` |
+| Shell scripts | `kebab-case.sh` | `setup-dev.sh`, `test-demo.sh` |
 | Docker files | lowercase | `dockerfile`, `entrypoint.sh` |
 | Config files | lowercase with extension | `bitcoin.conf`, `.env.example` |
 

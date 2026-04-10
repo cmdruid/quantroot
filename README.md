@@ -43,6 +43,37 @@ bitcoin-cli listsphincskeys
 
 Both BIP 368 and BIP 369 are active from block 1 on regtest.
 
+## Running bitcoin-qt
+
+Build the local Qt binary with:
+
+```bash
+make build-bitcoin
+```
+
+Launch on regtest with the repo demo datadir:
+
+```bash
+make qt-regtest
+```
+
+Launch on signet with your default user settings:
+
+```bash
+make qt-signet
+```
+
+For signet, `bitcoin-qt` uses your normal Bitcoin Core config, typically
+`~/.bitcoin/bitcoin.conf` on Linux. If wallet sends fail with fee estimation
+errors, enable a fallback fee in the signet section:
+
+```ini
+signet=1
+
+[signet]
+fallbackfee=0.0001
+```
+
 ## Benchmarks
 
 | | Schnorr | SPHINCS+ |

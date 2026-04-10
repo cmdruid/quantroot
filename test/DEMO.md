@@ -168,6 +168,27 @@ make qt-testnet
 make qt-signet
 ```
 
+`make qt-signet` launches `bitcoin-qt -signet` with your default user
+settings. It does not use the repo demo datadir.
+
+If signet wallet sends fail with:
+
+```text
+Fee estimation failed. Fallbackfee is disabled.
+```
+
+add this to your normal Bitcoin Core config, typically
+`~/.bitcoin/bitcoin.conf` on Linux:
+
+```ini
+signet=1
+
+[signet]
+fallbackfee=0.0001
+```
+
+Then restart `bitcoin-qt`.
+
 On public networks:
 - `createsphincskey` works (creates the key)
 - `getquantumaddress` works (generates valid bech32m addresses)

@@ -85,8 +85,8 @@ SPHINCS+ cryptographic library:
   with a custom `slh_dsa_bitcoin` parameter set (n=16, h=32, d=4, k=10, a=14).
 - **Deployment** — BIP 9 versionbits with buried deployment for regtest
   (`-testactivationheight=sphincs@N`).
-- **Tests** — 56 functional tests across `feature_sphincs.py` and
-  `feature_keypath_hardening.py`, plus fuzz targets and benchmarks.
+- **Tests** — 42 consensus test cases across `feature_sphincs.py` (33) and
+  `feature_keypath_hardening.py` (9), plus fuzz targets and benchmarks.
 
 #### Key Files
 
@@ -101,8 +101,8 @@ SPHINCS+ cryptographic library:
 | `src/consensus/params.h` | `DEPLOYMENT_SPHINCS`, `DEPLOYMENT_KEYPATH_HARDENING` enums |
 | `src/kernel/chainparams.cpp` | Activation heights (max for mainnet/testnet, 1 for regtest) |
 | `src/validation.cpp` | `DeploymentActiveAt` checks in `GetBlockScriptFlags` |
-| `test/functional/feature_sphincs.py` | 43 BIP 369 tests |
-| `test/functional/feature_keypath_hardening.py` | 13 BIP 368 tests |
+| `test/functional/feature_sphincs.py` | 33 BIP 369 test cases |
+| `test/functional/feature_keypath_hardening.py` | 9 BIP 368 test cases |
 | `test/functional/test_framework/sphincs.py` | `SphincsKey`, `SphincsSigner`, `build_sphincs_annex` |
 
 ### Annex Type Byte Namespace

@@ -4,7 +4,7 @@ Package update and release workflow for Quantroot.
 
 ## Prerequisites
 
-- All tests passing (`make test-e2e`)
+- All tests passing (`make test-demo`)
 - No uncommitted changes
 - On the release branch
 
@@ -12,7 +12,7 @@ Package update and release workflow for Quantroot.
 
 ```bash
 make check
-make test-e2e
+make test-demo
 git status  # should be clean
 ```
 
@@ -33,7 +33,7 @@ git status  # should be clean
 After updating services, run the full E2E suite:
 
 ```bash
-make test-e2e
+make test-demo
 ```
 
 ## Finalization

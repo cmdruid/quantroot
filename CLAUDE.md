@@ -33,8 +33,8 @@ with `quantroot-`. Networking is internal via Docker Compose networks.
 |------|-----------|
 | Understanding the domain | [docs/INDEX.md](docs/INDEX.md) |
 | Changing code or services | [dev/docs/CONVENTIONS.md](dev/docs/CONVENTIONS.md) |
-| Debugging a failure | [test/docs/DEBUGGING.md](test/docs/DEBUGGING.md) |
-| Adding a test | [test/docs/OWNERSHIP.md](test/docs/OWNERSHIP.md) |
+| Running tests | [test/README.md](test/README.md) |
+| Running a demo | [test/DEMO.md](test/DEMO.md) |
 | Preparing a release | [dev/docs/RELEASE.md](dev/docs/RELEASE.md) |
 | Making an architecture decision | [dev/adr/README.md](dev/adr/README.md) |
 

@@ -29,8 +29,7 @@ are implementation details.
 | Gate | When to use | What it proves |
 |------|------------|---------------|
 | `make check` | Every change | Static correctness, doc consistency |
-| `make test-smoke` | During development | Services start and respond |
-| `make test-e2e` | Before merge | Full cross-service behavior |
+| `make test-demo` | Before merge | Full demo pipeline (22 checks, 6 phases) |
 
 ## Planning and Decision Policy
 

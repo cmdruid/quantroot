@@ -35,8 +35,7 @@ Feature branch naming:
 | `make start` | Start core services |
 | `make stop` | Stop all services |
 | `make health` | Check service health |
-| `make test-e2e` | Run full E2E suite |
-| `make test-smoke` | Run fast smoke tests |
+| `make test-demo` | Run demo E2E test (22 checks) |
 | `make check` | Run static checks and doc consistency |
 
 ## Working With Submodules
@@ -48,11 +47,10 @@ Feature branch naming:
 
 ## Development Workflow
 
-1. Start the stack: `make start`
+1. Start the stack: `make start BG=1`
 2. Make your changes
-3. Run the fast gate: `make test-smoke`
-4. Run targeted checks: `make test-e2e`
-5. Verify docs: `make check`
+3. Run the demo gate: `make test-demo`
+4. Verify docs: `make check`
 
 ## Conventions
 

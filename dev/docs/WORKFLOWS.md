@@ -46,8 +46,7 @@ make logs-<service>  # Specific service
 | Speed | Command | Use when |
 |-------|---------|----------|
 | Fast | `make check` | Quick static check |
-| Medium | `make test-smoke` | Verify services respond |
-| Full | `make test-e2e` | Pre-merge validation |
+| Full | `make test-demo` | Pre-merge validation (requires Docker) |
 
 ## Refreshing Dependencies
 

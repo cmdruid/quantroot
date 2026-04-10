@@ -161,7 +161,8 @@ build-bitcoin:
 qt-regtest:
 	./build/bitcoin/bin/bitcoin-qt \
 		-regtest \
-		-addnode=127.0.0.1:18444
+		-addnode=127.0.0.1:18444 \
+		-fallbackfee=0.0001
 
 # Launch bitcoin-qt natively (mainnet)
 qt-mainnet:

@@ -2,11 +2,11 @@
 
 ## Overview
 
-| Test | Command | Time | Coverage |
-|------|---------|------|----------|
-| Unit tests | `make test-unit` | ~30s | 46 cases: keys, descriptors, DB |
-| Consensus tests | `make test-consensus` | ~1m | 42 cases: opcode, annex, activation |
-| Wallet tests | `make test-wallet` | ~2m | 66 assertions: RPCs, PSBT, spend |
+| Test | Where | Time | Coverage |
+|------|-------|------|----------|
+| Unit tests | `repos/bitcoin` | ~30s | 46 cases: keys, descriptors, DB |
+| Consensus tests | `repos/bitcoin` | ~1m | 42 cases: opcode, annex, activation |
+| Wallet tests | `repos/bitcoin` | ~2m | 66 assertions: RPCs, PSBT, spend |
 | Demo E2E | `make test-demo` | ~30s | 22 checks: full Docker pipeline |
 
 ## Unit Tests

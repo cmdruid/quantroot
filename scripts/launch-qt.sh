@@ -19,7 +19,7 @@ NETWORK="${1:---mainnet}"
 case "$NETWORK" in
   --regtest)
     mkdir -p "$ROOT_DIR/data/demo-qt"
-    exec "$QT_BIN" -regtest -datadir="$ROOT_DIR/data/demo-qt" -addnode=127.0.0.1:19444
+    exec "$QT_BIN" -regtest -datadir="$ROOT_DIR/data/demo-qt" -addnode=127.0.0.1:19444 -fallbackfee=0.0001
     ;;
   --testnet)
     exec "$QT_BIN" -testnet

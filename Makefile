@@ -123,20 +123,23 @@ build-bitcoin: ## Build Bitcoin Core binaries (including bitcoin-qt) to build/bi
 
 .PHONY: qt-regtest
 qt-regtest: ## Launch bitcoin-qt (regtest, peers with container node, data/demo-qt)
-	@mkdir -p data/demo-qt
-	./build/bitcoin/bin/bitcoin-qt -regtest -datadir=$(PWD)/data/demo-qt -addnode=127.0.0.1:19444
+	./scripts/launch-qt.sh --regtest
 
 .PHONY: qt-mainnet
 qt-mainnet: ## Launch bitcoin-qt (mainnet, public peers)
-	./build/bitcoin/bin/bitcoin-qt
+	./scripts/launch-qt.sh --mainnet
 
 .PHONY: qt-testnet
 qt-testnet: ## Launch bitcoin-qt (testnet, public peers)
-	./build/bitcoin/bin/bitcoin-qt -testnet
+	./scripts/launch-qt.sh --testnet
 
 .PHONY: qt-signet
-qt-signet: ## Launch bitcoin-qt (signet, public peers)
-	./build/bitcoin/bin/bitcoin-qt -signet
+qt-signet: ## Launch bitcoin-qt (signet, default user settings, public peers)
+	./scripts/launch-qt.sh --signet
+
+.PHONY: qt-signet-default
+qt-signet-default: ## Launch bitcoin-qt (signet, default user settings, public peers)
+	./scripts/launch-qt.sh --signet
 
 .PHONY: shell-bitcoin
 shell-bitcoin: ## Open a shell in the bitcoind container
