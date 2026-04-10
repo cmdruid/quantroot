@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'repos/bitcoin/**'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake g++ make pkg-config \
+            libevent-dev libboost-dev libsqlite3-dev libzmq3-dev \
+            libqrencode-dev libdbus-1-dev python3
+
+      - name: Cache cmake build
+        uses: actions/cache@v4
+        with:
+          path: repos/bitcoin/build
+          key: bitcoin-build-${{ hashFiles('repos/bitcoin/src/**') }}
+          restore-keys: bitcoin-build-
+
+      - name: Build Bitcoin Core
+        working-directory: repos/bitcoin
+        run: |
+          cmake -B build \
+            -DBUILD_DAEMON=ON \
+            -DBUILD_CLI=ON \
+            -DBUILD_GUI=OFF \
+            -DBUILD_TX=OFF \
+            -DBUILD_UTIL=OFF \
+            -DBUILD_TESTS=ON \
+            -DBUILD_BENCH=OFF \
+            -DENABLE_WALLET=ON \
+            -DENABLE_IPC=OFF \
+            -DWITH_ZMQ=ON \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j$(nproc)
+
+      - name: Unit tests
+        working-directory: repos/bitcoin
+        run: |
+          build/bin/test_bitcoin \
+            --run_test=sphincskeys_tests,qextkey_tests,qis_descriptor_tests,sphincskeys_db_tests
+
+      - name: Functional tests - consensus
+        working-directory: repos/bitcoin
+        run: |
+          python3 test/functional/feature_sphincs.py --configfile=build/test/config.ini
+          python3 test/functional/feature_keypath_hardening.py --configfile=build/test/config.ini
+
+      - name: Functional tests - wallet
+        working-directory: repos/bitcoin
+        run: |
+          python3 test/functional/wallet_sphincs.py --configfile=build/test/config.ini
+          python3 test/functional/wallet_sphincs_psbt.py --configfile=build/test/config.ini
+          python3 test/functional/wallet_sphincs_activation.py --configfile=build/test/config.ini
+          python3 test/functional/wallet_sphincs_scriptpath.py --configfile=build/test/config.ini

@@ -46,3 +46,23 @@ services:
       <<: *healthcheck-defaults
       test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=quantroot",
              "-rpcpassword=quantroot", "getblockchaininfo"]
+
+  faucet:
+    build:
+      context: services/faucet
+    container_name: quantroot-faucet
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - FAUCET_RPC_URL=http://quantroot-bitcoin:18443
+      - FAUCET_RPC_USER=quantroot
+      - FAUCET_RPC_PASS=quantroot
+      - FAUCET_RPC_WALLET=faucet
+      - FAUCET_AMOUNT=0.001
+      - FAUCET_RATE_LIMIT_SECONDS=3600
+      - FAUCET_PORT=3000
+    depends_on:
+      bitcoin:
+        condition: service_healthy
+    logging: *default-logging

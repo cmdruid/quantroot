@@ -159,6 +159,10 @@ reset-demo: ## Stop demo services and delete all demo data
 dev-website: ## Start the website dev server
 	cd services/website && npx astro dev
 
+.PHONY: dev-faucet
+dev-faucet: ## Start the faucet dev server (requires local bitcoind)
+	cd services/faucet && bun run dev
+
 # ---------------------------------------------------------------------------
 # Service-specific targets (pattern rules)
 # ---------------------------------------------------------------------------
