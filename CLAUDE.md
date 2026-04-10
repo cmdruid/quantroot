@@ -32,11 +32,12 @@ with `quantroot-`. Networking is internal via Docker Compose networks.
 | Task | Start here |
 |------|-----------|
 | Understanding the domain | [docs/INDEX.md](docs/INDEX.md) |
-| Changing code or services | [dev/docs/CONVENTIONS.md](dev/docs/CONVENTIONS.md) |
+| Understanding the architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Getting started | [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) |
+| Conventions and contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Running tests | [test/README.md](test/README.md) |
 | Running a demo | [test/DEMO.md](test/DEMO.md) |
-| Preparing a release | [dev/docs/RELEASE.md](dev/docs/RELEASE.md) |
-| Making an architecture decision | [dev/adr/README.md](dev/adr/README.md) |
+| Implementation plans | [dev/README.md](dev/README.md) |
 
 ## Key Gotchas
 
@@ -53,4 +54,4 @@ with `quantroot-`. Networking is internal via Docker Compose networks.
 - Prefer `make` targets over raw `docker compose` commands
 - Use `make health` to verify stack state before and after changes
 - When creating new files, follow the naming conventions in
-  [dev/docs/CONVENTIONS.md](dev/docs/CONVENTIONS.md)
+  [CONTRIBUTING.md](CONTRIBUTING.md)

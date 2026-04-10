@@ -4,7 +4,7 @@
 
 Quantroot is a soft-fork upgrade path that brings [SPHINCS+](https://sphincs.org/) (SLH-DSA) post-quantum signatures to Bitcoin through Taproot — with zero cost today and full protection when you need it.
 
-**Website:** [www.quantroot.org](https://www.quantroot.org)
+**Website:** [www.quantroot.org](https://www.quantroot.org) | **Get Started:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 
 ## How It Works
 
@@ -115,10 +115,10 @@ python3 test/functional/wallet_sphincs_scriptpath.py --configfile=build/test/con
 |-----------|----------|
 | `repos/bitcoin` | Bitcoin Core fork (submodule, `quantroot` branch) |
 | `repos/bips` | BIP specifications and test vectors |
-| `services/website` | Project website ([www.quantroot.org](https://www.quantroot.org)) |
-| `docs/` | Domain guides, overview, glossary |
-| `dev/` | Plans, specs, reports, conventions |
-| `test/` | Cross-service test infrastructure |
+| `docs/` | [Getting started](docs/GETTING_STARTED.md), [architecture](docs/ARCHITECTURE.md), [overview](docs/OVERVIEW.md), [changes](docs/CHANGES.md) |
+| `test/` | [Demo guide](test/DEMO.md), [test overview](test/README.md), automated E2E |
+| `dev/` | Implementation [plans](dev/plans/) and audit [reports](dev/reports/) |
+| `services/` | Docker service definitions |
 
 ## License
 

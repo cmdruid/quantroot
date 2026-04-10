@@ -3,7 +3,7 @@
 - Status: proposed
 - Date: 2026-04-06
 - Owner: cmdruid
-- Spec: `dev/specs/qr-descriptor.md`
+- Spec: `repos/bips/bip-0395.mediawiki (qr() descriptor section)`
 
 ## Context
 

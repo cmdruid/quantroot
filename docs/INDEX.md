@@ -2,16 +2,18 @@
 
 ## Reading Paths
 
-### Crash Course
+### New here?
 
-1. [OVERVIEW.md](OVERVIEW.md) — what Quantroot does and why
-2. [GLOSSARY.md](GLOSSARY.md) — shared terminology
+1. [GETTING_STARTED.md](GETTING_STARTED.md) — clone, build, demo in 5 minutes
+2. [OVERVIEW.md](OVERVIEW.md) — what Quantroot does and why
+3. [ARCHITECTURE.md](ARCHITECTURE.md) — how the pieces fit together
 
 ### Deep Dive
 
 1. [OVERVIEW.md](OVERVIEW.md) — problem, solution, architecture
-2. BIP specifications (below)
-3. [GLOSSARY.md](GLOSSARY.md) for reference
+2. [ARCHITECTURE.md](ARCHITECTURE.md) — data flow, signing pipeline, file map
+3. BIP specifications (below)
+4. [GLOSSARY.md](GLOSSARY.md) for reference
 
 ## BIP Specifications
 
@@ -52,7 +54,10 @@ Background specifications that Quantroot builds upon:
 
 | Document | Purpose |
 |----------|---------|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Clone, build, demo in 5 minutes |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Data flow, signing pipeline, file map |
 | [OVERVIEW.md](OVERVIEW.md) | Problem statement, solution design, architecture |
+| [CHANGES.md](CHANGES.md) | Change inventory (files, lines, by area) |
 | [GLOSSARY.md](GLOSSARY.md) | Shared terminology and definitions |
 
 ## Scope Boundary
@@ -66,6 +71,6 @@ This knowledge base covers:
 
 This knowledge base does NOT cover:
 
-- Developer workflow, conventions, release procedures — [dev/](../dev/README.md)
-- Testing, debugging, validation — [test/](../test/README.md)
-- Infrastructure structure and service topology — [dev/docs/STRUCTURE.md](../dev/docs/STRUCTURE.md)
+- Contributing and conventions — [CONTRIBUTING.md](../CONTRIBUTING.md)
+- Testing and demos — [test/](../test/README.md)
+- Implementation plans — [dev/](../dev/README.md)
