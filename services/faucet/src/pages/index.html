@@ -16,7 +16,7 @@
       justify-content: center;
     }
     .container {
-      max-width: 480px;
+      max-width: 520px;
       width: 100%;
       padding: 2rem;
     }
@@ -30,6 +30,7 @@
       color: #9494a8;
       font-size: 0.875rem;
       margin-bottom: 2rem;
+      line-height: 1.5;
     }
     .form-group {
       margin-bottom: 1rem;
@@ -43,6 +44,12 @@
       color: #9494a8;
       margin-bottom: 0.5rem;
     }
+    .hint {
+      font-size: 0.7rem;
+      color: #6b6b80;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
     input {
       width: 100%;
       padding: 0.75rem 1rem;
@@ -51,11 +58,14 @@
       border-radius: 0.5rem;
       color: #e4e4ed;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
     }
     input:focus {
       outline: none;
       border-color: #8b5cf6;
+    }
+    input::placeholder {
+      color: #4a4a5a;
     }
     button {
       width: 100%;
@@ -68,6 +78,7 @@
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
+      margin-top: 0.5rem;
     }
     button:hover { background: #7c3aed; }
     button:disabled {
@@ -82,6 +93,7 @@
       font-size: 0.8rem;
       font-family: 'JetBrains Mono', monospace;
       word-break: break-all;
+      white-space: pre-wrap;
     }
     .result.success {
       background: rgba(139, 92, 246, 0.1);
@@ -101,17 +113,48 @@
       font-size: 0.75rem;
       color: #9494a8;
     }
+    .steps {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      color: #9494a8;
+    }
+    .steps code {
+      color: #8b5cf6;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1><span>Q</span>uantroot Faucet</h1>
-    <p class="subtitle">Get test coins for quantum-insured wallet development.</p>
+    <p class="subtitle">
+      Get test coins for quantum-insured wallet development.
+      Requires a <strong style="color:#e4e4ed">qpub</strong> key from the Quantroot soft fork.
+    </p>
+
+    <div class="steps">
+      <strong style="color:#e4e4ed">How to get a qpub:</strong><br>
+      <code>bitcoin-cli createwallet "quantum"</code><br>
+      <code>bitcoin-cli createsphincskey</code><br>
+      <code>bitcoin-cli exportqpub</code> &rarr; copy the <code>Q1...</code> key
+    </div>
 
     <form id="faucet-form">
       <div class="form-group">
-        <label>Bitcoin Address</label>
-        <input type="text" id="address" placeholder="bc1p... or bcrt1p..." required>
+        <label>Quantum-Insured Public Key (qpub)</label>
+        <input type="text" id="qpub" placeholder="Q1..." required>
+        <div class="hint">From <code>bitcoin-cli exportqpub</code></div>
+      </div>
+      <div class="form-group">
+        <label>Receive Address</label>
+        <input type="text" id="address" placeholder="bc1p... or tb1p..." required>
+        <div class="hint">Must belong to this qpub (from <code>bitcoin-cli getquantumaddress</code>)</div>
       </div>
       <button type="submit" id="submit-btn">Request Coins</button>
     </form>
@@ -131,18 +174,19 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const qpub = document.getElementById('qpub').value.trim();
       const address = document.getElementById('address').value.trim();
-      if (!address) return;
+      if (!qpub || !address) return;
 
       btn.disabled = true;
-      btn.textContent = 'Sending...';
+      btn.textContent = 'Verifying & Sending...';
       result.classList.add('hidden');
 
       try {
         const res = await fetch('/api/faucet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address }),
+          body: JSON.stringify({ qpub, address }),
         });
         const data = await res.json();
 
