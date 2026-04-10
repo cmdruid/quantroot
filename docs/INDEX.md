@@ -57,6 +57,8 @@ Background specifications that Quantroot builds upon:
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Clone, build, demo in 5 minutes |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Data flow, signing pipeline, file map |
 | [OVERVIEW.md](OVERVIEW.md) | Problem statement, solution design, architecture |
+| [SPHINCS.md](SPHINCS.md) | How SPHINCS+ signatures work (WOTS+, XMSS, FORS, hypertree) |
+| [EXPLAINER.md](EXPLAINER.md) | Design decisions and technical tradeoffs |
 | [CHANGES.md](CHANGES.md) | Change inventory (files, lines, by area) |
 | [GLOSSARY.md](GLOSSARY.md) | Shared terminology and definitions |
 
