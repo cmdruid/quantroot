@@ -1,0 +1,474 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout title="Quantroot — Understanding SPHINCS+ Signatures">
+  <Nav />
+  <main class="pt-32 pb-20">
+    <div class="mx-auto max-w-4xl px-6">
+
+      <h1 class="mb-4 text-4xl font-bold tracking-tight">Understanding SPHINCS+</h1>
+      <p class="mb-12 text-lg text-text-secondary">
+        A visual guide to how hash-based post-quantum signatures work
+        and why they're used in Quantroot.
+      </p>
+
+      <!-- Section 1: Why Hash-Based? -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Why Hash-Based Signatures?</h2>
+        <p class="mb-6 text-text-secondary">
+          Schnorr and ECDSA derive security from the difficulty of solving the
+          Elliptic Curve Discrete Logarithm Problem. A quantum computer running
+          Shor's algorithm breaks this in polynomial time. SPHINCS+ uses only
+          hash functions &mdash; which remain secure against quantum attacks.
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-2 mb-8">
+          <div class="rounded-xl border border-border bg-surface-raised p-6 text-center">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">Schnorr / ECDSA</div>
+            <div class="mb-2 font-mono text-2xl font-bold">64 bytes</div>
+            <div class="mb-4 text-sm text-text-secondary">Elliptic curve math</div>
+            <div class="mx-auto h-2 w-16 rounded-full bg-btc-orange"></div>
+            <div class="mt-3 text-xs text-btc-orange">Quantum vulnerable</div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-6 text-center">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+</div>
+            <div class="mb-2 font-mono text-2xl font-bold">4,080 bytes</div>
+            <div class="mb-4 text-sm text-text-secondary">Hash functions only</div>
+            <div class="mx-auto h-2 w-full rounded-full bg-quantum"></div>
+            <div class="mt-3 text-xs text-quantum">Quantum resistant</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: WOTS+ Hash Chains -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Building Block 1: Hash Chains (WOTS+)</h2>
+        <p class="mb-6 text-text-secondary">
+          The simplest hash-based signature: start with a secret, hash it many times
+          to get a public key. To sign a value <code class="text-text-primary">d</code>,
+          hash the secret <code class="text-text-primary">d</code> times. The verifier
+          hashes the rest of the way and checks it matches the public key.
+        </p>
+
+        <!-- Animated hash chain -->
+        <div class="rounded-xl border border-border bg-surface-raised p-6 overflow-hidden mb-4">
+          <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+            Interactive: Click a position to "sign" that value
+          </div>
+          <div class="hash-chain flex items-center justify-between gap-1 overflow-x-auto py-4" id="hashChain">
+            <div class="chain-node secret shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="0">
+              <div class="h-10 w-10 rounded-lg bg-quantum/20 border border-quantum/40 flex items-center justify-center text-xs font-mono text-quantum transition-all">s</div>
+              <span class="text-[10px] text-text-secondary">secret</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="1">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H¹</div>
+              <span class="text-[10px] text-text-secondary">1</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="2">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H²</div>
+              <span class="text-[10px] text-text-secondary">2</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="3">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H³</div>
+              <span class="text-[10px] text-text-secondary">3</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="4">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H⁴</div>
+              <span class="text-[10px] text-text-secondary">4</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="5">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H⁵</div>
+              <span class="text-[10px] text-text-secondary">5</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node shrink-0 flex flex-col items-center gap-1 cursor-pointer" data-index="6">
+              <div class="h-10 w-10 rounded-lg bg-surface-overlay border border-border flex items-center justify-center text-xs font-mono text-text-secondary transition-all">H⁶</div>
+              <span class="text-[10px] text-text-secondary">6</span>
+            </div>
+            <div class="shrink-0 text-text-secondary/30">→</div>
+            <div class="chain-node pubkey shrink-0 flex flex-col items-center gap-1">
+              <div class="h-10 w-10 rounded-lg bg-btc-orange/20 border border-btc-orange/40 flex items-center justify-center text-xs font-mono text-btc-orange">pk</div>
+              <span class="text-[10px] text-text-secondary">public</span>
+            </div>
+          </div>
+          <div id="chainStatus" class="text-center text-sm text-text-secondary mt-2">
+            Click any position to see how signing works
+          </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border border-border p-4">
+            <div class="mb-2 flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-quantum"></span>
+              <span class="text-sm font-semibold">Signing</span>
+            </div>
+            <p class="text-sm text-text-secondary">
+              To sign value <code class="text-text-primary">d</code>, reveal
+              <code class="text-text-primary">H<sup>d</sup>(secret)</code> &mdash;
+              hash the secret exactly <code class="text-text-primary">d</code> times.
+            </p>
+          </div>
+          <div class="rounded-lg border border-border p-4">
+            <div class="mb-2 flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-btc-orange"></span>
+              <span class="text-sm font-semibold">Verification</span>
+            </div>
+            <p class="text-sm text-text-secondary">
+              Hash the signature <code class="text-text-primary">w&minus;d</code> more times.
+              If it equals the public key, the signature is valid.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Merkle Tree -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Building Block 2: Merkle Trees (XMSS)</h2>
+        <p class="mb-6 text-text-secondary">
+          A single WOTS+ key can only sign one message. XMSS organizes many WOTS+
+          keys as leaves of a Merkle tree. To verify a signature, you only need
+          the <strong class="text-text-primary">authentication path</strong> &mdash;
+          the sibling hashes from leaf to root.
+        </p>
+
+        <!-- Animated Merkle tree -->
+        <div class="rounded-xl border border-border bg-surface-raised p-6 overflow-hidden mb-4">
+          <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+            Interactive: Click a leaf to see its authentication path
+          </div>
+          <svg viewBox="0 0 400 220" class="w-full" id="merkleTree">
+            <!-- Edges -->
+            <line x1="200" y1="30" x2="100" y2="80" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="root" data-child="h01"/>
+            <line x1="200" y1="30" x2="300" y2="80" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="root" data-child="h23"/>
+            <line x1="100" y1="80" x2="50" y2="140" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="h01" data-child="l0"/>
+            <line x1="100" y1="80" x2="150" y2="140" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="h01" data-child="l1"/>
+            <line x1="300" y1="80" x2="250" y2="140" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="h23" data-child="l2"/>
+            <line x1="300" y1="80" x2="350" y2="140" stroke="#2a2a3a" stroke-width="1.5" class="tree-edge" data-parent="h23" data-child="l3"/>
+
+            <!-- Root -->
+            <circle cx="200" cy="30" r="18" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-node" data-id="root"/>
+            <text x="200" y="34" text-anchor="middle" fill="#e4e4ed" font-size="10" font-family="monospace">Root</text>
+
+            <!-- Internal nodes -->
+            <circle cx="100" cy="80" r="18" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-node" data-id="h01"/>
+            <text x="100" y="84" text-anchor="middle" fill="#9494a8" font-size="10" font-family="monospace">H01</text>
+            <circle cx="300" cy="80" r="18" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-node" data-id="h23"/>
+            <text x="300" y="84" text-anchor="middle" fill="#9494a8" font-size="10" font-family="monospace">H23</text>
+
+            <!-- Leaves -->
+            <rect x="30" y="125" width="40" height="30" rx="6" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-leaf" data-id="l0" style="cursor:pointer"/>
+            <text x="50" y="144" text-anchor="middle" fill="#9494a8" font-size="9" font-family="monospace">W₀</text>
+            <rect x="130" y="125" width="40" height="30" rx="6" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-leaf" data-id="l1" style="cursor:pointer"/>
+            <text x="150" y="144" text-anchor="middle" fill="#9494a8" font-size="9" font-family="monospace">W₁</text>
+            <rect x="230" y="125" width="40" height="30" rx="6" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-leaf" data-id="l2" style="cursor:pointer"/>
+            <text x="250" y="144" text-anchor="middle" fill="#9494a8" font-size="9" font-family="monospace">W₂</text>
+            <rect x="330" y="125" width="40" height="30" rx="6" fill="#12121a" stroke="#2a2a3a" stroke-width="1.5" class="tree-leaf" data-id="l3" style="cursor:pointer"/>
+            <text x="350" y="144" text-anchor="middle" fill="#9494a8" font-size="9" font-family="monospace">W₃</text>
+
+            <!-- Labels -->
+            <text x="50" y="175" text-anchor="middle" fill="#6b6b80" font-size="8">WOTS+ 0</text>
+            <text x="150" y="175" text-anchor="middle" fill="#6b6b80" font-size="8">WOTS+ 1</text>
+            <text x="250" y="175" text-anchor="middle" fill="#6b6b80" font-size="8">WOTS+ 2</text>
+            <text x="350" y="175" text-anchor="middle" fill="#6b6b80" font-size="8">WOTS+ 3</text>
+          </svg>
+          <div id="treeStatus" class="text-center text-sm text-text-secondary mt-2">
+            Click a leaf to highlight its authentication path
+          </div>
+        </div>
+
+        <p class="text-sm text-text-secondary">
+          The authentication path for any leaf is only <code class="text-text-primary">log₂(n)</code>
+          hashes. For a tree with 256 leaves, only 8 sibling hashes are needed &mdash; the verifier
+          recomputes the root from bottom to top.
+        </p>
+      </section>
+
+      <!-- Section 4: The Hypertree -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">The Full Picture: Hypertree</h2>
+        <p class="mb-6 text-text-secondary">
+          SPHINCS+ stacks multiple XMSS trees into a <strong class="text-text-primary">hypertree</strong>.
+          Each layer signs the root of the layer below. At the bottom, FORS (Forest of Random Subsets)
+          signs the actual message.
+        </p>
+
+        <div class="rounded-xl border border-border bg-surface-raised p-6 overflow-hidden">
+          <div class="space-y-4">
+            <!-- Layer 3 (top) -->
+            <div class="flex items-center gap-4">
+              <div class="w-20 text-right text-xs text-text-secondary">Layer 3<br/><span class="text-quantum">(top)</span></div>
+              <div class="flex-1 flex justify-center">
+                <div class="hypertree-layer rounded-lg border border-quantum/30 bg-quantum/5 px-8 py-3 text-center animate-pulse-slow">
+                  <div class="text-xs font-mono text-quantum">XMSS Tree</div>
+                  <div class="text-[10px] text-text-secondary">Root = Public Key</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-center"><div class="h-6 w-px bg-quantum/30"></div></div>
+
+            <!-- Layer 2 -->
+            <div class="flex items-center gap-4">
+              <div class="w-20 text-right text-xs text-text-secondary">Layer 2</div>
+              <div class="flex-1 flex justify-center gap-4">
+                <div class="hypertree-layer rounded-lg border border-quantum/20 bg-quantum/5 px-4 py-2 text-center">
+                  <div class="text-xs font-mono text-quantum/70">XMSS</div>
+                </div>
+                <div class="hypertree-layer rounded-lg border border-quantum/20 bg-quantum/5 px-4 py-2 text-center">
+                  <div class="text-xs font-mono text-quantum/70">XMSS</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-center"><div class="h-6 w-px bg-quantum/20"></div></div>
+
+            <!-- Layer 1 -->
+            <div class="flex items-center gap-4">
+              <div class="w-20 text-right text-xs text-text-secondary">Layer 1</div>
+              <div class="flex-1 flex justify-center gap-2">
+                <div class="rounded-lg border border-quantum/15 bg-quantum/5 px-3 py-2 text-center">
+                  <div class="text-[10px] font-mono text-quantum/60">XMSS</div>
+                </div>
+                <div class="rounded-lg border border-quantum/15 bg-quantum/5 px-3 py-2 text-center">
+                  <div class="text-[10px] font-mono text-quantum/60">XMSS</div>
+                </div>
+                <div class="rounded-lg border border-quantum/15 bg-quantum/5 px-3 py-2 text-center">
+                  <div class="text-[10px] font-mono text-quantum/60">XMSS</div>
+                </div>
+                <div class="rounded-lg border border-quantum/15 bg-quantum/5 px-3 py-2 text-center">
+                  <div class="text-[10px] font-mono text-quantum/60">XMSS</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-center"><div class="h-6 w-px bg-quantum/15"></div></div>
+
+            <!-- Layer 0 (bottom XMSS) -->
+            <div class="flex items-center gap-4">
+              <div class="w-20 text-right text-xs text-text-secondary">Layer 0</div>
+              <div class="flex-1 flex justify-center gap-1">
+                {Array.from({length: 8}).map(() => (
+                  <div class="rounded border border-quantum/10 bg-quantum/5 px-2 py-1">
+                    <div class="text-[8px] font-mono text-quantum/50">X</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div class="flex justify-center"><div class="h-6 w-px bg-btc-orange/30"></div></div>
+
+            <!-- FORS -->
+            <div class="flex items-center gap-4">
+              <div class="w-20 text-right text-xs text-text-secondary">FORS<br/><span class="text-btc-orange">(bottom)</span></div>
+              <div class="flex-1 flex justify-center gap-1">
+                {Array.from({length: 10}).map((_, i) => (
+                  <div class="rounded border border-btc-orange/20 bg-btc-orange/5 px-2 py-1">
+                    <div class="text-[8px] font-mono text-btc-orange/60">T{i}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div class="flex justify-center text-xs text-text-secondary mt-2">↑ signs the message</div>
+          </div>
+        </div>
+
+        <p class="mt-4 text-sm text-text-secondary">
+          Bitcoin's parameters: <code class="text-text-primary">d=4</code> XMSS layers,
+          <code class="text-text-primary">k=10</code> FORS trees,
+          <code class="text-text-primary">h=32</code> total height.
+          The top XMSS root is the 32-byte public key.
+        </p>
+      </section>
+
+      <!-- Section 5: Signature Anatomy -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Inside a 4,080-Byte Signature</h2>
+
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 0.4%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">Randomizer (16B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-btc-orange/40 transition-all duration-500" style="width: 58.8%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">FORS signature (2,400B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/20 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 0 (416B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/25 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 1 (416B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 2 (416B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/40 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 3 (416B)</span>
+          </div>
+        </div>
+
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border border-border p-4 text-center">
+            <div class="font-mono text-2xl font-bold text-btc-orange">64 B</div>
+            <div class="text-sm text-text-secondary">Schnorr signature</div>
+          </div>
+          <div class="rounded-lg border border-border p-4 text-center">
+            <div class="font-mono text-2xl font-bold text-quantum">4,080 B</div>
+            <div class="text-sm text-text-secondary">SPHINCS+ signature (64&times; larger)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Why Stateless Matters -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Why Stateless Matters for Bitcoin</h2>
+        <p class="mb-6 text-text-secondary">
+          XMSS requires tracking which leaf indices have been used &mdash; reusing
+          a leaf breaks security. SPHINCS+ is <strong class="text-text-primary">stateless</strong>:
+          the message hash deterministically selects the leaf. No state to lose.
+        </p>
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="mb-2 text-btc-orange text-xl">&#x21bb;</div>
+            <div class="text-sm font-semibold mb-1">Restore from seed</div>
+            <div class="text-xs text-text-secondary">Same key, no state to recover</div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="mb-2 text-quantum text-xl">&#x2716;</div>
+            <div class="text-sm font-semibold mb-1">No index tracking</div>
+            <div class="text-xs text-text-secondary">Message hash selects the leaf</div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="mb-2 text-text-primary text-xl">&infin;</div>
+            <div class="text-sm font-semibold mb-1">Unlimited signatures</div>
+            <div class="text-xs text-text-secondary">Same key signs any number of UTXOs</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Back links -->
+      <div class="border-t border-border pt-8 flex flex-wrap gap-6 text-sm text-text-secondary">
+        <a href="/" class="hover:text-text-primary transition-colors">&larr; Back to Home</a>
+        <a href="/wallet" class="hover:text-text-primary transition-colors">Wallet Guide</a>
+        <a href="https://github.com/cmdruid/quantroot" class="hover:text-text-primary transition-colors">GitHub</a>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+</style>
+
+<script>
+  // Hash chain interaction
+  document.addEventListener('DOMContentLoaded', () => {
+    const chain = document.getElementById('hashChain');
+    const status = document.getElementById('chainStatus');
+    if (!chain || !status) return;
+
+    const nodes = chain.querySelectorAll('.chain-node');
+
+    chain.addEventListener('click', (e) => {
+      const node = (e.target as HTMLElement).closest('.chain-node');
+      if (!node) return;
+      const idx = parseInt(node.getAttribute('data-index') || '0');
+
+      nodes.forEach((n, i) => {
+        const box = n.querySelector('div');
+        if (!box) return;
+        if (i <= idx) {
+          // Revealed (signature)
+          box.classList.remove('bg-surface-overlay', 'border-border', 'text-text-secondary');
+          box.classList.add('bg-quantum/30', 'border-quantum/50', 'text-quantum');
+        } else if (i < nodes.length - 1) {
+          // Verifier hashes these
+          box.classList.remove('bg-surface-overlay', 'border-border', 'text-text-secondary',
+                               'bg-quantum/30', 'border-quantum/50', 'text-quantum');
+          box.classList.add('bg-btc-orange/20', 'border-btc-orange/40', 'text-btc-orange');
+        }
+      });
+
+      const remaining = nodes.length - 2 - idx;
+      status.innerHTML = `Signed value <strong>${idx}</strong>: reveal H<sup>${idx}</sup>(s). Verifier hashes ${remaining} more times to reach public key.`;
+    });
+
+    // Merkle tree interaction
+    const tree = document.getElementById('merkleTree');
+    const treeStatus = document.getElementById('treeStatus');
+    if (!tree || !treeStatus) return;
+
+    const authPaths: Record<string, { path: string[]; edges: string[] }> = {
+      l0: { path: ['l0', 'l1', 'h23', 'root'], edges: ['h01-l0', 'root-h01'] },
+      l1: { path: ['l1', 'l0', 'h23', 'root'], edges: ['h01-l1', 'root-h01'] },
+      l2: { path: ['l2', 'l3', 'h01', 'root'], edges: ['h23-l2', 'root-h23'] },
+      l3: { path: ['l3', 'l2', 'h01', 'root'], edges: ['h23-l3', 'root-h23'] },
+    };
+
+    const siblingOf: Record<string, string> = { l0: 'l1', l1: 'l0', l2: 'l3', l3: 'l2' };
+    const parentSibling: Record<string, string> = { l0: 'h23', l1: 'h23', l2: 'h01', l3: 'h01' };
+
+    tree.querySelectorAll('.tree-leaf').forEach((leaf) => {
+      leaf.addEventListener('click', () => {
+        const id = leaf.getAttribute('data-id') || '';
+
+        // Reset all
+        tree.querySelectorAll('.tree-node, .tree-leaf').forEach((el) => {
+          (el as SVGElement).setAttribute('stroke', '#2a2a3a');
+          (el as SVGElement).setAttribute('fill', '#12121a');
+        });
+        tree.querySelectorAll('.tree-edge').forEach((el) => {
+          (el as SVGElement).setAttribute('stroke', '#2a2a3a');
+        });
+
+        // Highlight selected leaf
+        (leaf as SVGElement).setAttribute('fill', '#8b5cf620');
+        (leaf as SVGElement).setAttribute('stroke', '#8b5cf6');
+
+        // Highlight sibling (auth path node)
+        const sib = siblingOf[id];
+        if (sib) {
+          const sibEl = tree.querySelector(`[data-id="${sib}"]`);
+          if (sibEl) {
+            (sibEl as SVGElement).setAttribute('fill', '#f7931a20');
+            (sibEl as SVGElement).setAttribute('stroke', '#f7931a');
+          }
+        }
+
+        // Highlight parent sibling
+        const ps = parentSibling[id];
+        if (ps) {
+          const psEl = tree.querySelector(`[data-id="${ps}"]`);
+          if (psEl) {
+            (psEl as SVGElement).setAttribute('fill', '#f7931a20');
+            (psEl as SVGElement).setAttribute('stroke', '#f7931a');
+          }
+        }
+
+        // Highlight root
+        const rootEl = tree.querySelector('[data-id="root"]');
+        if (rootEl) {
+          (rootEl as SVGElement).setAttribute('fill', '#8b5cf620');
+          (rootEl as SVGElement).setAttribute('stroke', '#8b5cf6');
+        }
+
+        treeStatus.innerHTML = `Leaf <strong>${id.toUpperCase()}</strong>: auth path = [<span style="color:#f7931a">${sib?.toUpperCase()}</span>, <span style="color:#f7931a">${ps?.toUpperCase()}</span>] → verify Root`;
+      });
+    });
+  });
+</script>
