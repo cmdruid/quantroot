@@ -132,11 +132,18 @@ import Footer from "../components/Footer.astro";
       <!-- Section 3: Merkle Tree -->
       <section class="mb-16">
         <h2 class="mb-6 text-2xl font-bold">Building Block 2: Merkle Trees (XMSS)</h2>
+        <p class="mb-4 text-text-secondary">
+          A single WOTS+ key can only sign <strong class="text-text-primary">one message</strong>.
+          If you sign a second message with the same WOTS+ key, an attacker who sees both signatures
+          can combine the revealed hash chain values to forge a signature for any message.
+        </p>
         <p class="mb-6 text-text-secondary">
-          A single WOTS+ key can only sign one message. XMSS organizes many WOTS+
-          keys as leaves of a Merkle tree. To verify a signature, you only need
-          the <strong class="text-text-primary">authentication path</strong> &mdash;
-          the sibling hashes from leaf to root.
+          XMSS solves this by organizing many WOTS+ keypairs as leaves of a
+          <strong class="text-text-primary">Merkle tree</strong>. Use leaf 0 for
+          your first message, leaf 1 for the second, and so on. To verify, the
+          signer provides the <strong class="text-text-primary">authentication path</strong>
+          &mdash; the sibling hashes from the used leaf up to the root. The verifier
+          recomputes the root and checks it matches the public key.
         </p>
 
         <!-- Animated Merkle tree -->
@@ -327,29 +334,104 @@ import Footer from "../components/Footer.astro";
         </div>
       </section>
 
-      <!-- Section 6: Why Stateless Matters -->
+      <!-- Section 6: The State Problem -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">Why Stateless Matters for Bitcoin</h2>
+        <h2 class="mb-6 text-2xl font-bold">The State Problem</h2>
         <p class="mb-6 text-text-secondary">
-          XMSS requires tracking which leaf indices have been used &mdash; reusing
-          a leaf breaks security. SPHINCS+ is <strong class="text-text-primary">stateless</strong>:
-          the message hash deterministically selects the leaf. No state to lose.
+          There's a critical problem with XMSS: each leaf can only be used <strong class="text-text-primary">once</strong>.
+          If you sign two different messages with the same leaf, an attacker can combine the revealed
+          hash chain values to forge signatures. So the signer must keep a counter &mdash; "I've used
+          leaves 0, 1, 2... next I use leaf 3." That counter is the <strong class="text-text-primary">state</strong>.
         </p>
+
+        <!-- State visualization -->
+        <div class="rounded-xl border border-btc-orange/30 bg-btc-orange/5 p-6 mb-6">
+          <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">The danger of state</div>
+          <div class="space-y-4 text-sm text-text-secondary">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">1</span>
+              <div><strong class="text-text-primary">Wallet restore from seed.</strong> You restore a wallet from your mnemonic phrase. The counter is gone. Your next signature might reuse a leaf that was already used before the restore &mdash; <span class="text-btc-orange">security silently broken</span>.</div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">2</span>
+              <div><strong class="text-text-primary">Two devices, same key.</strong> Your phone and laptop both have the same key. Both think the counter is at leaf 5. Both sign different messages with leaf 5 &mdash; <span class="text-btc-orange">forgery possible</span>.</div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">3</span>
+              <div><strong class="text-text-primary">Backup restored.</strong> You restore yesterday's backup. The counter rewinds. Today's signatures reuse yesterday's leaves &mdash; <span class="text-btc-orange">undetectable compromise</span>.</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          For Bitcoin wallets, state is <strong class="text-text-primary">poison</strong>.
+          Wallet seeds are designed to be restored from a mnemonic phrase alone. Hardware
+          wallets and software wallets may share the same seed. There's no reliable way
+          to synchronize a counter across all devices. XMSS alone is too dangerous for Bitcoin.
+        </p>
+      </section>
+
+      <!-- Section 7: How SPHINCS+ Eliminates State -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">How SPHINCS+ Eliminates State</h2>
+        <p class="mb-6 text-text-secondary">
+          SPHINCS+ solves this with a simple insight: instead of a counter, use the
+          <strong class="text-text-primary">message itself</strong> to choose which leaf to use.
+        </p>
+
+        <!-- Stateful vs stateless comparison -->
+        <div class="grid gap-6 md:grid-cols-2 mb-8">
+          <div class="rounded-xl border border-btc-orange/30 bg-surface-raised p-6">
+            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">XMSS (Stateful)</div>
+            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
+              <div class="text-text-secondary">counter = <span class="text-btc-orange">load_from_disk()</span></div>
+              <div class="text-text-secondary">leaf = counter</div>
+              <div class="text-text-secondary">sign(message, leaf)</div>
+              <div class="text-text-secondary">counter += 1</div>
+              <div class="text-text-secondary"><span class="text-btc-orange">save_to_disk(counter)</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              If the counter is lost, corrupted, or reused across devices,
+              security is silently broken.
+            </p>
+          </div>
+          <div class="rounded-xl border border-quantum/30 bg-surface-raised p-6">
+            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+ (Stateless)</div>
+            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
+              <div class="text-text-secondary">leaf = <span class="text-quantum">PRF(secret, message)</span></div>
+              <div class="text-text-secondary">sign(message, leaf)</div>
+              <div class="text-text-secondary"><span class="text-quantum">// no state to save</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              The message deterministically selects the leaf. Same message = same
+              leaf = same signature (safe). Different message = different leaf (safe).
+            </p>
+          </div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          The pseudorandom function <code class="text-text-primary">PRF(secret, message)</code>
+          maps each message to a leaf index in the hypertree. With 2<sup>32</sup> possible leaves
+          (tree height 32), the probability of two different messages selecting the same leaf is
+          negligible. No counter needed. No disk state. No synchronization between devices.
+        </p>
+
+        <!-- Benefits -->
         <div class="grid gap-4 md:grid-cols-3">
           <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-2 text-btc-orange text-xl">&#x21bb;</div>
+            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&#x21bb;</div>
             <div class="text-sm font-semibold mb-1">Restore from seed</div>
-            <div class="text-xs text-text-secondary">Same key, no state to recover</div>
+            <div class="text-xs text-text-secondary">Mnemonic phrase is the only backup. Same seed reproduces the same SPHINCS+ key. No counter to recover.</div>
           </div>
           <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-2 text-quantum text-xl">&#x2716;</div>
-            <div class="text-sm font-semibold mb-1">No index tracking</div>
-            <div class="text-xs text-text-secondary">Message hash selects the leaf</div>
+            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&#x1F4F1;</div>
+            <div class="text-sm font-semibold mb-1">Multiple devices</div>
+            <div class="text-xs text-text-secondary">Phone and laptop can use the same key safely. Each transaction picks its own leaf from the message hash.</div>
           </div>
           <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-2 text-text-primary text-xl">&infin;</div>
+            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&infin;</div>
             <div class="text-sm font-semibold mb-1">Unlimited signatures</div>
-            <div class="text-xs text-text-secondary">Same key signs any number of UTXOs</div>
+            <div class="text-xs text-text-secondary">One SPHINCS+ key per Bitcoin account. Signs any number of UTXOs without security degradation.</div>
           </div>
         </div>
       </section>
