@@ -11,46 +11,295 @@ import Footer from "../components/Footer.astro";
 
       <h1 class="mb-4 text-4xl font-bold tracking-tight">Understanding SPHINCS+</h1>
       <p class="mb-12 text-lg text-text-secondary">
-        A visual guide to how hash-based post-quantum signatures work
-        and why they're used in Quantroot.
+        A visual walkthrough of how hash-based post-quantum signatures work
+        and why Quantroot uses them to protect Bitcoin.
       </p>
 
-      <!-- Section 1: Why Hash-Based? -->
+      <!-- Section 1: What is SPHINCS+ -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">Why Hash-Based Signatures?</h2>
+        <h2 class="mb-6 text-2xl font-bold">What is SPHINCS+?</h2>
         <p class="mb-6 text-text-secondary">
-          Schnorr and ECDSA derive security from the difficulty of solving the
-          Elliptic Curve Discrete Logarithm Problem. A quantum computer running
-          Shor's algorithm breaks this in polynomial time. SPHINCS+ uses only
-          hash functions &mdash; which remain secure against quantum attacks.
+          SPHINCS+ (standardized as SLH-DSA in NIST FIPS 205) is a post-quantum
+          digital signature scheme. It replaces the elliptic-curve math behind
+          ECDSA and Schnorr with nothing but <strong class="text-text-primary">hash
+          functions</strong> &mdash; the same primitives you already know from
+          <code class="text-text-primary">SHA-256</code> and block explorers.
+          That substitution is what makes it safe against quantum computers.
+        </p>
+        <p class="mb-6 text-text-secondary">
+          At the highest level, SPHINCS+ is built from a handful of
+          cryptographic pieces stacked on top of each other. You will see these
+          names repeatedly:
         </p>
 
-        <div class="grid gap-4 md:grid-cols-2 mb-8">
-          <div class="rounded-xl border border-border bg-surface-raised p-6 text-center">
-            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">Schnorr / ECDSA</div>
-            <div class="mb-2 font-mono text-2xl font-bold">64 bytes</div>
-            <div class="mb-4 text-sm text-text-secondary">Elliptic curve math</div>
-            <div class="mx-auto h-2 w-16 rounded-full bg-btc-orange"></div>
-            <div class="mt-3 text-xs text-btc-orange">Quantum vulnerable</div>
-          </div>
-          <div class="rounded-xl border border-border bg-surface-raised p-6 text-center">
-            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+</div>
-            <div class="mb-2 font-mono text-2xl font-bold">4,080 bytes</div>
-            <div class="mb-4 text-sm text-text-secondary">Hash functions only</div>
-            <div class="mx-auto h-2 w-full rounded-full bg-quantum"></div>
-            <div class="mt-3 text-xs text-quantum">Quantum resistant</div>
-          </div>
+        <div class="overflow-hidden rounded-xl border border-border bg-surface-raised">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr class="border-b border-border">
+                <td class="p-4 font-mono font-semibold text-quantum align-top w-32">WOTS+</td>
+                <td class="p-4 text-text-secondary">One-time signature made from hash chains. Signs a single message.</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-4 font-mono font-semibold text-quantum align-top">Merkle tree</td>
+                <td class="p-4 text-text-secondary">Binary tree of hashes that commits to many values under one root.</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-4 font-mono font-semibold text-quantum align-top">XMSS</td>
+                <td class="p-4 text-text-secondary">A Merkle tree of WOTS+ keys &mdash; multi-time signing, but <em>stateful</em>.</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-4 font-mono font-semibold text-quantum align-top">FORS</td>
+                <td class="p-4 text-text-secondary">A "few-time" signature over a forest of small Merkle trees. Signs the message hash.</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-mono font-semibold text-quantum align-top">Hypertree</td>
+                <td class="p-4 text-text-secondary">A tree of XMSS trees that lets one small public key authenticate billions of signatures.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <!-- Section 2: WOTS+ Hash Chains -->
+      <!-- Section 2: What is a Digital Signature? -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">Building Block 1: Hash Chains (WOTS+)</h2>
+        <h2 class="mb-6 text-2xl font-bold">What is a Digital Signature?</h2>
         <p class="mb-6 text-text-secondary">
-          The simplest hash-based signature: start with a secret, hash it many times
-          to get a public key. To sign a value <code class="text-text-primary">d</code>,
-          hash the secret <code class="text-text-primary">d</code> times. The verifier
-          hashes the rest of the way and checks it matches the public key.
+          Before getting into SPHINCS+, it's worth being precise about what a
+          signature scheme actually <em>does</em>. A digital signature is a
+          piece of math that proves three things at once:
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-3 mb-8">
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Who</div>
+            <p class="text-sm text-text-secondary">
+              Only the holder of a specific private key could have produced
+              this signature.
+            </p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">What</div>
+            <p class="text-sm text-text-secondary">
+              The signature is tied to one exact message. Change a single byte
+              and the signature no longer matches.
+            </p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Verifiable</div>
+            <p class="text-sm text-text-secondary">
+              Anyone can check it using only the public key &mdash; no
+              interaction with the signer required.
+            </p>
+          </div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          Think of it as a <strong class="text-text-primary">wax seal made of
+          math</strong>. Only the person with the signet ring (the private key)
+          can stamp it, and anyone with a picture of the seal (the public key)
+          can tell whether a document was stamped by the real ring or a forgery.
+        </p>
+        <p class="mb-6 text-text-secondary">
+          In Bitcoin, signatures are how the network decides whether to believe
+          a transaction. When you spend a UTXO, your wallet produces a
+          signature over the transaction data, and every node on the planet
+          independently verifies it. If the signature is valid, the coins move.
+          If it isn't, the transaction is rejected.
+        </p>
+        <p class="text-text-secondary">
+          If the math underneath a signature scheme breaks, an attacker can
+          produce valid-looking signatures for transactions you never
+          authorized. Bitcoin addresses are <em>hashes</em> of public keys, so
+          funds at a never-used address are safe even if ECDSA breaks &mdash;
+          but the moment you spend from an address, its public key is revealed
+          on-chain, and any change that went back to the same address is
+          suddenly at risk. Post-quantum signatures exist to make sure that
+          window of vulnerability never opens.
+        </p>
+      </section>
+
+      <!-- Section 3: What is a Hash Function? -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">What is a Hash Function?</h2>
+        <p class="mb-6 text-text-secondary">
+          SPHINCS+ is built almost entirely out of hash functions, so it's
+          worth a minute to define what one is. A
+          <strong class="text-text-primary">hash function</strong> is a kind of
+          one-way blender for data. You feed in any input &mdash; a word, a
+          file, a whole book, a Bitcoin transaction &mdash; and you get back a
+          fixed-size fingerprint of that input, typically 256 bits (32 bytes).
+          The hash function Bitcoin uses internally is called
+          <strong class="text-text-primary">SHA-256</strong>.
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-3 mb-8">
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Fast one-way</div>
+            <p class="text-sm text-text-secondary">
+              Computing <code class="text-text-primary">H(x)</code> from
+              <code class="text-text-primary">x</code> takes microseconds.
+            </p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Impossible to reverse</div>
+            <p class="text-sm text-text-secondary">
+              Given a fingerprint, there is no known way to recover the input
+              &mdash; finding one would take longer than the age of the
+              universe.
+            </p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Tiny changes ripple out</div>
+            <p class="text-sm text-text-secondary">
+              Flipping a single bit of the input produces a completely
+              different-looking fingerprint. There is no way to nudge a hash.
+            </p>
+          </div>
+        </div>
+
+        <p class="text-text-secondary">
+          That's the whole toolkit SPHINCS+ is built from. No modular
+          arithmetic, no elliptic curves, no secret algebra &mdash; just a
+          one-way blender applied over and over again in clever patterns. The
+          rest of this guide is really just <em>here are the clever patterns</em>.
+        </p>
+      </section>
+
+      <!-- Section 4: Why Hash-Based? -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Why Hash-Based Signatures?</h2>
+        <p class="mb-6 text-text-secondary">
+          Every signature scheme rests on some math problem that is hard to
+          reverse. For Bitcoin's current signatures &mdash; ECDSA and Schnorr &mdash;
+          that problem is the <strong class="text-text-primary">Elliptic Curve
+          Discrete Logarithm Problem</strong> (ECDLP).
+        </p>
+
+        <div class="grid gap-4 md:grid-cols-2 mb-8">
+          <div class="rounded-xl border border-btc-orange/30 bg-surface-raised p-6">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">ECDSA / Schnorr</div>
+            <div class="mb-3 font-mono text-sm text-text-secondary">
+              <div>private: <span class="text-text-primary">d</span></div>
+              <div>public:&nbsp; <span class="text-text-primary">P = d·G</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              Forward direction is easy: multiply the generator <code class="text-text-primary">G</code>
+              by <code class="text-text-primary">d</code>. The reverse &mdash;
+              recover <code class="text-text-primary">d</code> from
+              <code class="text-text-primary">P</code> &mdash; takes ≈2<sup>128</sup>
+              operations classically.
+            </p>
+          </div>
+          <div class="rounded-xl border border-quantum/30 bg-surface-raised p-6">
+            <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+</div>
+            <div class="mb-3 font-mono text-sm text-text-secondary">
+              <div>private: <span class="text-text-primary">s</span></div>
+              <div>public:&nbsp; <span class="text-text-primary">H(H(...H(s)))</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              Forward direction is easy: hash the secret many times. The
+              reverse &mdash; invert <code class="text-text-primary">H</code> &mdash;
+              is infeasible both classically <em>and</em> on a quantum computer.
+            </p>
+          </div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          To put 2<sup>128</sup> in perspective: if every computer on Earth
+          today worked on cracking a single key, the sun would burn out first.
+          This is the "hard problem" Bitcoin's current signatures depend on.
+        </p>
+
+        <h3 class="mb-3 text-lg font-semibold">The quantum problem</h3>
+        <p class="mb-6 text-text-secondary">
+          In 1994 Peter Shor published an algorithm that, when run on a
+          quantum computer, solves the discrete-log problem in
+          <strong class="text-text-primary">polynomial time</strong> &mdash;
+          roughly, "fast enough to matter in practice." A sufficiently large
+          quantum computer running Shor's algorithm could recover the private
+          key <code class="text-text-primary">d</code> from the public key
+          <code class="text-text-primary">P</code> in hours instead of the
+          effectively infinite 2<sup>128</sup> operations classically. This
+          doesn't just break ECDSA &mdash; it breaks everything in the same
+          family: Schnorr, RSA, Diffie-Hellman.
+        </p>
+        <p class="mb-6 text-text-secondary">
+          Nobody has built such a machine yet. Current quantum computers are
+          far too small and noisy to run Shor's on a 256-bit key. But
+          cryptographic standards are slow to change, and coins that are safe
+          today need to stay safe in a decade. That's why the work is
+          happening now.
+        </p>
+
+        <h3 class="mb-3 text-lg font-semibold">Why hashing survives</h3>
+        <p class="mb-6 text-text-secondary">
+          Hash functions don't rely on the kind of algebraic structure Shor's
+          algorithm exploits. The best known quantum attack against a hash
+          function is <strong class="text-text-primary">Grover's algorithm</strong>
+          &mdash; a general-purpose quantum speedup for brute-force search
+          &mdash; which only speeds things up by a <em>quadratic</em> factor:
+          2<sup>n</sup> becomes 2<sup>n/2</sup>. Simply use a larger hash
+          output and you're back where you started. A 256-bit hash still
+          provides 128-bit security against a quantum attacker, the same
+          level Bitcoin's Schnorr already targets.
+        </p>
+      </section>
+
+      <!-- Section 3: WOTS+ -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Building Block 1: WOTS+ (Hash Chains)</h2>
+        <p class="mb-6 text-text-secondary">
+          The Winternitz One-Time Signature (WOTS+) scheme is the first real
+          hash-based signature we'll meet. It starts from an idea you have
+          probably already seen in Bitcoin: a
+          <strong class="text-text-primary">hash commitment</strong>.
+        </p>
+
+        <h3 class="mb-3 text-lg font-semibold">Starting point: hash commitments</h3>
+        <p class="mb-4 text-text-secondary">
+          To prove later that you knew a secret <code class="text-text-primary">s</code>,
+          publish <code class="text-text-primary">H(s)</code> today. When you
+          eventually reveal <code class="text-text-primary">s</code>, anyone can
+          compute the hash and check it against the commitment. Nobody can forge
+          this because inverting <code class="text-text-primary">H</code> is
+          infeasible.
+        </p>
+
+        <div class="rounded-xl border border-border bg-surface-raised p-6 font-mono text-sm mb-6">
+          <div class="text-text-secondary">commit → <span class="text-quantum">H(s)</span> &nbsp;&nbsp;<span class="text-text-secondary/60">(published today, keeps s secret)</span></div>
+          <div class="text-text-secondary">reveal → <span class="text-text-primary">s</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-text-secondary/60">(published later)</span></div>
+          <div class="text-text-secondary">verify → H(s) == commit ?</div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          Lightning Network invoices work exactly this way. The receiver picks a
+          random preimage <code class="text-text-primary">s</code>, hashes it,
+          and puts <code class="text-text-primary">H(s)</code> &mdash; the
+          <em>payment hash</em> &mdash; into the invoice. A payment is routed
+          with the condition "release funds only against a preimage that hashes
+          to <code class="text-text-primary">H(s)</code>." When the receiver
+          reveals <code class="text-text-primary">s</code>, routing nodes verify
+          the hash and forward the settlement. No signature, no key exchange &mdash;
+          just a hash.
+        </p>
+
+        <p class="mb-6 text-text-secondary">
+          A single commitment like this isn't yet a digital signature: it only
+          proves knowledge of one pre-agreed secret, once. WOTS+ takes the same
+          primitive and stretches it into something much more powerful by
+          chaining many hashes together and using the <em>position</em> in the
+          chain to encode a message.
+        </p>
+
+        <h3 class="mb-3 text-lg font-semibold">The hash chain</h3>
+        <p class="mb-6 text-text-secondary">
+          Pick a random secret <code class="text-text-primary">s</code>. Apply
+          the hash function <code class="text-text-primary">H</code> to it
+          <code class="text-text-primary">w</code> times in a row. The end of
+          the chain is the public key. To sign a digit
+          <code class="text-text-primary">d</code>, reveal the intermediate hash
+          <code class="text-text-primary">H<sup>d</sup>(s)</code>. A verifier
+          can hash the rest of the way to the public key.
         </p>
 
         <!-- Animated hash chain -->
@@ -104,47 +353,120 @@ import Footer from "../components/Footer.astro";
           </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <div class="rounded-lg border border-border p-4">
-            <div class="mb-2 flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-quantum"></span>
-              <span class="text-sm font-semibold">Signing</span>
-            </div>
-            <p class="text-sm text-text-secondary">
-              To sign value <code class="text-text-primary">d</code>, reveal
-              <code class="text-text-primary">H<sup>d</sup>(secret)</code> &mdash;
-              hash the secret exactly <code class="text-text-primary">d</code> times.
-            </p>
-          </div>
-          <div class="rounded-lg border border-border p-4">
-            <div class="mb-2 flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-btc-orange"></span>
-              <span class="text-sm font-semibold">Verification</span>
-            </div>
-            <p class="text-sm text-text-secondary">
-              Hash the signature <code class="text-text-primary">w&minus;d</code> more times.
-              If it equals the public key, the signature is valid.
-            </p>
-          </div>
-        </div>
+        <p class="mb-6 text-text-secondary">
+          The security of the scheme comes from hash-function asymmetry. Given
+          <code class="text-text-primary">H<sup>5</sup>(s)</code>, the verifier
+          can trivially hash <em>forward</em> to the public key. But a forger
+          trying to sign a <em>lower</em> digit &mdash; say 3 &mdash; would
+          need <code class="text-text-primary">H<sup>3</sup>(s)</code>, and
+          computing that from
+          <code class="text-text-primary">H<sup>5</sup>(s)</code> would
+          require running the hash function <em>backwards</em>, which is the
+          thing hash functions are specifically designed to make impossible.
+        </p>
+
+        <p class="mb-6 text-text-secondary">
+          You might spot a gap: an attacker who sees
+          <code class="text-text-primary">H<sup>5</sup>(s)</code>
+          <em>can</em> hash forward to produce
+          <code class="text-text-primary">H<sup>6</sup>(s)</code>,
+          <code class="text-text-primary">H<sup>7</sup>(s)</code>, and so on,
+          and claim a higher digit. WOTS+ closes this hole with a separate
+          <strong class="text-text-primary">checksum chain</strong> whose
+          digits move in the <em>opposite</em> direction. Any forward move on
+          a message chain forces a backward move on the checksum chain &mdash;
+          and forging in both directions at once is infeasible.
+        </p>
+
+        <p class="mb-4 text-text-secondary">
+          The <strong class="text-text-primary">Winternitz parameter</strong>
+          <code class="text-text-primary">w</code> controls the chain length.
+          Higher <code class="text-text-primary">w</code> means longer chains,
+          fewer chains needed, shorter signatures &mdash; but more hashing.
+          Quantroot uses <code class="text-text-primary">w = 256</code>, the
+          maximum allowed by FIPS 205.
+        </p>
+        <p class="text-text-secondary">
+          The catch: <strong class="text-text-primary">you can only ever sign
+          one message</strong>. If you sign a second message with the same
+          WOTS+ key, an attacker sees two intermediate hashes in the same chain
+          and can hash either of them forward to forge signatures. WOTS+ is
+          <strong class="text-text-primary">one-time by construction</strong>.
+        </p>
       </section>
 
-      <!-- Section 3: Merkle Tree -->
+      <!-- Section 4: Merkle Trees -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">Building Block 2: Merkle Trees (XMSS)</h2>
-        <p class="mb-4 text-text-secondary">
-          A single WOTS+ key can only sign <strong class="text-text-primary">one message</strong>.
-          If you sign a second message with the same WOTS+ key, an attacker who sees both signatures
-          can combine the revealed hash chain values to forge a signature for any message.
-        </p>
+        <h2 class="mb-6 text-2xl font-bold">Building Block 2: Merkle Trees</h2>
         <p class="mb-6 text-text-secondary">
-          XMSS solves this by organizing many WOTS+ keypairs as leaves of a
-          <strong class="text-text-primary">Merkle tree</strong>. Use leaf 0 for
-          your first message, leaf 1 for the second, and so on. To verify, the
-          signer provides the <strong class="text-text-primary">authentication path</strong>
-          &mdash; the sibling hashes from the used leaf up to the root. The verifier
-          recomputes the root and checks it matches the public key.
+          Merkle trees are a general-purpose primitive, older than Bitcoin
+          itself. They let you commit to many values under a single root hash
+          and prove membership of any one value with only
+          <code class="text-text-primary">log₂(n)</code> hashes. The next
+          building block &mdash; XMSS &mdash; is simply "put WOTS+ keys at the
+          leaves of a Merkle tree," so it's worth a brief refresher.
         </p>
+
+        <div class="rounded-xl border border-quantum/20 bg-quantum/5 p-5 mb-6">
+          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Mental model</div>
+          <p class="text-sm text-text-secondary">
+            Think of a Merkle tree as a <strong class="text-text-primary">family
+            tree made of fingerprints</strong>. Each person's fingerprint is
+            built by blending the fingerprints of their two children. The
+            ancestor at the top of the tree has a single fingerprint that is,
+            by construction, a blend of every descendant. Trust the root
+            fingerprint and you can verify any single descendant by walking
+            back up the tree &mdash; you only need the fingerprints of their
+            siblings at each level, not the whole family.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border bg-surface-raised p-6 font-mono text-xs mb-6 leading-relaxed">
+          <div class="text-text-secondary text-center">Root = H(H01 ‖ H23)</div>
+          <div class="text-text-secondary/50 text-center">/ &nbsp; &nbsp; &nbsp; \</div>
+          <div class="text-text-secondary text-center">H01 = H(H0‖H1) &nbsp; &nbsp; H23 = H(H2‖H3)</div>
+          <div class="text-text-secondary/50 text-center">/ &nbsp; \ &nbsp; &nbsp; &nbsp; &nbsp; / &nbsp; \</div>
+          <div class="text-text-secondary text-center">H0 &nbsp; &nbsp; H1 &nbsp; &nbsp; H2 &nbsp; &nbsp; H3</div>
+          <div class="text-text-secondary/50 text-center">| &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp;| &nbsp; &nbsp; |</div>
+          <div class="text-text-secondary text-center">v₀ &nbsp; &nbsp; v₁ &nbsp; &nbsp; v₂ &nbsp; &nbsp; v₃</div>
+        </div>
+
+        <p class="text-text-secondary">
+          To prove that a specific leaf is in the tree, you provide the
+          <strong class="text-text-primary">authentication path</strong>: the
+          sibling hashes at each level on the way from the leaf to the root.
+          The verifier walks up the path, recomputes the root, and checks it
+          matches the published one. A million leaves costs twenty hashes &mdash;
+          that logarithmic scaling is why Merkle trees show up in Bitcoin
+          blocks, Git objects, and certificate transparency logs.
+        </p>
+      </section>
+
+      <!-- Section 5: XMSS -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Building Block 3: XMSS</h2>
+        <p class="mb-6 text-text-secondary">
+          XMSS &mdash; the eXtended Merkle Signature Scheme &mdash; is exactly
+          what the name suggests: a Merkle tree whose leaves are WOTS+ public
+          keys. The XMSS public key is just the Merkle root. To sign message
+          number <code class="text-text-primary">i</code>, use WOTS+ keypair
+          <code class="text-text-primary">i</code> and include the authentication
+          path from leaf <code class="text-text-primary">i</code> to the root.
+          You've turned one-time signatures into many-time signatures.
+        </p>
+
+        <div class="rounded-xl border border-quantum/20 bg-quantum/5 p-5 mb-6">
+          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Mental model</div>
+          <p class="text-sm text-text-secondary">
+            Picture XMSS as a <strong class="text-text-primary">key ring</strong>
+            with many one-use stamps hanging off it. Each stamp has its own
+            unique seal (a WOTS+ keypair), and the ring itself has a tiny
+            engraved label (the Merkle root) that certifies <em>"all of these
+            stamps are mine."</em> To stamp a document, pick an unused stamp,
+            press it, and attach a short proof that the stamp belongs to this
+            ring. The ring's label never changes, no matter which stamp you used.
+          </p>
+        </div>
 
         <!-- Animated Merkle tree -->
         <div class="rounded-xl border border-border bg-surface-raised p-6 overflow-hidden mb-4">
@@ -191,21 +513,136 @@ import Footer from "../components/Footer.astro";
           </div>
         </div>
 
-        <p class="text-sm text-text-secondary">
-          The authentication path for any leaf is only <code class="text-text-primary">log₂(n)</code>
-          hashes. For a tree with 256 leaves, only 8 sibling hashes are needed &mdash; the verifier
-          recomputes the root from bottom to top.
+        <p class="text-text-secondary">
+          Every leaf is still a WOTS+ key, and WOTS+ is still one-time. Which
+          brings us to the problem the next section is about.
         </p>
       </section>
 
-      <!-- Section 4: The Hypertree -->
+      <!-- Section 6: The State Problem -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">The Full Picture: Hypertree</h2>
+        <h2 class="mb-6 text-2xl font-bold">The State Problem</h2>
         <p class="mb-6 text-text-secondary">
-          SPHINCS+ stacks multiple XMSS trees into a <strong class="text-text-primary">hypertree</strong>.
-          Each layer signs the root of the layer below. At the bottom, FORS (Forest of Random Subsets)
-          signs the actual message.
+          XMSS requires the signer to remember which leaves have already been
+          used. In practice, that means maintaining a counter: <em>"I've signed
+          k messages, the next signature uses leaf k, then increment to k+1."</em>
+          That counter is called <strong class="text-text-primary">state</strong>,
+          and keeping it correct is suddenly part of the signer's job.
         </p>
+        <p class="mb-6 text-text-secondary">
+          State is <strong class="text-text-primary">poison</strong> for Bitcoin
+          wallets. Consider how a Bitcoin private key actually gets used:
+        </p>
+
+        <div class="rounded-xl border border-btc-orange/30 bg-btc-orange/5 p-6 mb-6">
+          <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">Three ways state fails</div>
+          <div class="space-y-4 text-sm text-text-secondary">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">1</span>
+              <div><strong class="text-text-primary">Restore from seed.</strong> The mnemonic can regenerate the private key, but it cannot regenerate "which leaves did I already use." Your first post-restore signature might reuse leaf 5 &mdash; the same leaf you used last week. <span class="text-btc-orange">Silent break</span>.</div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">2</span>
+              <div><strong class="text-text-primary">Two devices, one key.</strong> Laptop and phone both hold the same seed. Both think the next free leaf is 7. Each signs a different transaction with leaf 7. <span class="text-btc-orange">An observer who sees both signatures can forge a third</span>.</div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">3</span>
+              <div><strong class="text-text-primary">Backup restored.</strong> You restore a backup taken a week ago. The counter rewinds. Every signature you make today reuses a leaf you used since the backup was taken. <span class="text-btc-orange">Undetectable compromise</span>.</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-text-secondary">
+          Worst of all, none of these failures are <em>visible</em>. A signature
+          made with a reused leaf is structurally valid and every wallet will
+          accept it. The compromise only becomes apparent once an attacker
+          publishes a forgery &mdash; and by then it's too late. This is why
+          "just use XMSS" was never acceptable for Bitcoin.
+        </p>
+      </section>
+
+      <!-- Section 7: SPHINCS+ Stateless via PRF -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">SPHINCS+: Stateless via PRF</h2>
+        <p class="mb-6 text-text-secondary">
+          Here's the insight that makes SPHINCS+ work: instead of remembering
+          which leaf you've used, <strong class="text-text-primary">derive the
+          leaf from the message itself</strong>. SPHINCS+ uses a
+          <strong class="text-text-primary">pseudorandom function</strong>
+          (PRF) keyed by a secret. A PRF is a function whose output <em>looks</em>
+          random to anyone who doesn't know the secret, but is perfectly
+          deterministic for anyone who does &mdash; same inputs always produce
+          the same output. The same message always maps to the same leaf. No
+          counter. No disk. No synchronization between devices.
+        </p>
+
+        <!-- Stateful vs stateless comparison -->
+        <div class="grid gap-6 md:grid-cols-2 mb-8">
+          <div class="rounded-xl border border-btc-orange/30 bg-surface-raised p-6">
+            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">XMSS (Stateful)</div>
+            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
+              <div class="text-text-secondary">counter = <span class="text-btc-orange">load_from_disk()</span></div>
+              <div class="text-text-secondary">leaf = counter</div>
+              <div class="text-text-secondary">sign(message, leaf)</div>
+              <div class="text-text-secondary">counter += 1</div>
+              <div class="text-text-secondary"><span class="text-btc-orange">save_to_disk(counter)</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              If the counter is lost, corrupted, or reused across devices,
+              security is silently broken.
+            </p>
+          </div>
+          <div class="rounded-xl border border-quantum/30 bg-surface-raised p-6">
+            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+ (Stateless)</div>
+            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
+              <div class="text-text-secondary">leaf = <span class="text-quantum">PRF(secret, message)</span></div>
+              <div class="text-text-secondary">sign(message, leaf)</div>
+              <div class="text-text-secondary"><span class="text-quantum">// no state to save</span></div>
+            </div>
+            <p class="text-xs text-text-secondary">
+              The message deterministically selects the leaf. Same message = same
+              leaf = same signature (safe). Different message = different leaf (safe).
+            </p>
+          </div>
+        </div>
+
+        <p class="mb-6 text-text-secondary">
+          A deterministic leaf selection has a price: if two different messages
+          happen to collide on the same leaf, you get WOTS+-style reuse. To make
+          that collision probability astronomically small you need a <em>huge</em>
+          number of possible leaves &mdash; Quantroot targets 2<sup>32</sup>,
+          roughly four billion. For context, that's more than the total number
+          of Bitcoin transactions ever made, several times over. A single XMSS
+          tree that large is impractical to compute. The fix is to build the
+          tree out of smaller trees.
+        </p>
+      </section>
+
+      <!-- Section 8: The Hypertree -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">The Hypertree</h2>
+        <p class="mb-6 text-text-secondary">
+          SPHINCS+ stacks multiple XMSS trees into a
+          <strong class="text-text-primary">hypertree</strong> &mdash; a tree of
+          trees &mdash; with FORS instances at the very bottom. Each XMSS tree
+          is small, so computing its root is cheap. Each layer above 0 is really
+          a WOTS+ signature on the root hash of the tree directly below.
+        </p>
+
+        <div class="rounded-xl border border-quantum/20 bg-quantum/5 p-5 mb-6">
+          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Mental model</div>
+          <p class="text-sm text-text-secondary">
+            Think of a hypertree as a <strong class="text-text-primary">nested
+            filing cabinet</strong>. The top drawer contains a handful of
+            folders, each of which is a smaller cabinet with its own drawers.
+            Dig down a few levels and you reach the actual documents. The
+            public key on the front of the cabinet is a single label &mdash;
+            one short string &mdash; that certifies everything stored inside,
+            no matter how deep. You never have to open the whole cabinet to
+            prove a single document is in there; you only walk the chain of
+            drawers that contain it.
+          </p>
+        </div>
 
         <div class="rounded-xl border border-border bg-surface-raised p-6 overflow-hidden">
           <div class="space-y-4">
@@ -283,157 +720,233 @@ import Footer from "../components/Footer.astro";
           </div>
         </div>
 
-        <p class="mt-4 text-sm text-text-secondary">
-          Bitcoin's parameters: <code class="text-text-primary">d=4</code> XMSS layers,
-          <code class="text-text-primary">k=10</code> FORS trees,
-          <code class="text-text-primary">h=32</code> total height.
-          The top XMSS root is the 32-byte public key.
+        <p class="mt-6 text-text-secondary">
+          A 2<sup>32</sup> leaf capacity is spread across
+          <code class="text-text-primary">d=4</code> layers, so no single tree
+          is ever bigger than 2<sup>8</sup> = 256 leaves. Signing touches one
+          small tree per layer, not one giant tree. The one remaining piece is
+          the thing at the very bottom &mdash; the scheme that actually signs
+          the message hash.
         </p>
       </section>
 
-      <!-- Section 5: Signature Anatomy -->
+      <!-- Section 9: FORS -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">Inside a 4,080-Byte Signature</h2>
+        <h2 class="mb-6 text-2xl font-bold">Building Block 4: FORS</h2>
+        <p class="mb-6 text-text-secondary">
+          FORS &mdash; Forest Of Random Subsets &mdash; is the signature scheme
+          at the bottom of the hypertree. It signs the message hash directly,
+          and it is a <strong class="text-text-primary">few-time</strong>
+          signature: safe to sign a small number of messages rather than exactly
+          one. A FORS key is <code class="text-text-primary">k</code> small
+          Merkle trees; to sign a message hash, split it into
+          <code class="text-text-primary">k</code> indices, one per tree, and
+          reveal one leaf per tree.
+        </p>
 
-        <div class="space-y-2">
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 0.4%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">Randomizer (16B)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-btc-orange/40 transition-all duration-500" style="width: 58.8%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">FORS signature (2,400B)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-quantum/20 transition-all duration-500" style="width: 10.1%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 0 (416B)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-quantum/25 transition-all duration-500" style="width: 10.1%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 1 (416B)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 10.1%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 2 (416B)</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="h-6 rounded bg-quantum/40 transition-all duration-500" style="width: 10.1%"></div>
-            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 3 (416B)</span>
+        <div class="rounded-xl border border-quantum/20 bg-quantum/5 p-5 mb-6">
+          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">Mental model</div>
+          <p class="text-sm text-text-secondary">
+            Think of FORS as a <strong class="text-text-primary">multi-dial
+            combination lock</strong>. A standard lock has one dial and one
+            correct number; FORS has <code class="text-text-primary">k</code>
+            dials, each drawn from its own set of possible values. To "sign" a
+            message, you don't reveal the whole combination &mdash; only the
+            specific digit the message points to on each dial, plus enough
+            context (an authentication path within each mini-tree) for the
+            verifier to check that digit is genuinely part of your lock.
+            Different messages light up different dial positions, so each
+            signature reveals a different subset of your secrets.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border bg-surface-raised p-6 font-mono text-xs mb-6 leading-relaxed">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="text-quantum mb-1">Tree 0</div>
+              <div class="text-text-secondary/50">R₀</div>
+              <div class="text-text-secondary/50">/ \</div>
+              <div class="text-text-secondary/50">. &nbsp; .</div>
+              <div class="text-btc-orange">[★] &nbsp; .</div>
+              <div class="text-text-secondary/60 text-[10px] mt-1">reveal leaf i₀</div>
+            </div>
+            <div class="text-center">
+              <div class="text-quantum mb-1">Tree 1</div>
+              <div class="text-text-secondary/50">R₁</div>
+              <div class="text-text-secondary/50">/ \</div>
+              <div class="text-text-secondary/50">. &nbsp; .</div>
+              <div class="text-btc-orange">. &nbsp; [★]</div>
+              <div class="text-text-secondary/60 text-[10px] mt-1">reveal leaf i₁</div>
+            </div>
+            <div class="text-center">
+              <div class="text-quantum mb-1">Tree k-1</div>
+              <div class="text-text-secondary/50">R<sub>k-1</sub></div>
+              <div class="text-text-secondary/50">/ \</div>
+              <div class="text-text-secondary/50">. &nbsp; .</div>
+              <div class="text-btc-orange">[★] &nbsp; .</div>
+              <div class="text-text-secondary/60 text-[10px] mt-1">reveal leaf i<sub>k-1</sub></div>
+            </div>
           </div>
         </div>
 
-        <div class="mt-6 grid gap-4 md:grid-cols-2">
-          <div class="rounded-lg border border-border p-4 text-center">
+        <p class="text-text-secondary">
+          SPHINCS+ uses a <strong class="text-text-primary">fresh FORS key per
+          signature</strong> &mdash; which is exactly what the hypertree
+          provides. Each leaf in the bottom XMSS tree points to its own FORS
+          instance, and the PRF makes sure different messages almost always
+          land on different leaves. The few-time safety budget resets with
+          every signature.
+        </p>
+      </section>
+
+      <!-- Section 10: Bitcoin's Parameters -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Bitcoin's SPHINCS+ Parameters</h2>
+        <p class="mb-6 text-text-secondary">
+          Quantroot tunes SPHINCS+ for Bitcoin's constraints. Bigger isn't
+          always better &mdash; we care about signature size, verification
+          speed, and how many signatures a single key can safely make.
+        </p>
+
+        <div class="overflow-hidden rounded-xl border border-border bg-surface-raised mb-6">
+          <table class="w-full text-sm">
+            <thead class="border-b border-border bg-surface-overlay">
+              <tr>
+                <th class="p-3 text-left font-semibold w-20">Param</th>
+                <th class="p-3 text-left font-semibold w-20">Value</th>
+                <th class="p-3 text-left font-semibold">Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-border">
+                <td class="p-3 font-mono text-quantum">n</td>
+                <td class="p-3 font-mono text-text-primary">16</td>
+                <td class="p-3 text-text-secondary">Hash output size in bytes &mdash; security parameter</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-3 font-mono text-quantum">h</td>
+                <td class="p-3 font-mono text-text-primary">32</td>
+                <td class="p-3 text-text-secondary">Total hypertree height (2<sup>32</sup> possible signatures)</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-3 font-mono text-quantum">d</td>
+                <td class="p-3 font-mono text-text-primary">4</td>
+                <td class="p-3 text-text-secondary">Number of XMSS layers (8 levels per layer)</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-3 font-mono text-quantum">w</td>
+                <td class="p-3 font-mono text-text-primary">256</td>
+                <td class="p-3 text-text-secondary">Winternitz parameter &mdash; maximum, shortest WOTS+ sig</td>
+              </tr>
+              <tr class="border-b border-border">
+                <td class="p-3 font-mono text-quantum">k</td>
+                <td class="p-3 font-mono text-text-primary">10</td>
+                <td class="p-3 text-text-secondary">Number of FORS trees</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-mono text-quantum">a</td>
+                <td class="p-3 font-mono text-text-primary">14</td>
+                <td class="p-3 text-text-secondary">FORS tree height (2<sup>14</sup> = 16,384 leaves per tree)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="font-mono text-2xl font-bold text-quantum mb-1">32 B</div>
+            <div class="text-xs text-text-secondary">Public key</div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="font-mono text-2xl font-bold text-quantum mb-1">64 B</div>
+            <div class="text-xs text-text-secondary">Secret key</div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
+            <div class="font-mono text-2xl font-bold text-quantum mb-1">4,080 B</div>
+            <div class="text-xs text-text-secondary">Signature</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 11: Signature Anatomy -->
+      <section class="mb-16">
+        <h2 class="mb-6 text-2xl font-bold">Inside a 4,080-Byte Signature</h2>
+
+        <div class="space-y-2 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 0.4%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">Randomizer (16 B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-btc-orange/40 transition-all duration-500" style="width: 58.8%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">FORS signature (2,400 B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/20 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 0 (416 B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/25 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 1 (416 B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/30 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 2 (416 B)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-6 rounded bg-quantum/40 transition-all duration-500" style="width: 10.1%"></div>
+            <span class="text-xs text-text-secondary whitespace-nowrap">XMSS Layer 3 (416 B)</span>
+          </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg border border-border bg-surface-raised p-4 text-center">
             <div class="font-mono text-2xl font-bold text-btc-orange">64 B</div>
             <div class="text-sm text-text-secondary">Schnorr signature</div>
           </div>
-          <div class="rounded-lg border border-border p-4 text-center">
+          <div class="rounded-lg border border-border bg-surface-raised p-4 text-center">
             <div class="font-mono text-2xl font-bold text-quantum">4,080 B</div>
             <div class="text-sm text-text-secondary">SPHINCS+ signature (64&times; larger)</div>
           </div>
         </div>
-      </section>
-
-      <!-- Section 6: The State Problem -->
-      <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">The State Problem</h2>
-        <p class="mb-6 text-text-secondary">
-          There's a critical problem with XMSS: each leaf can only be used <strong class="text-text-primary">once</strong>.
-          If you sign two different messages with the same leaf, an attacker can combine the revealed
-          hash chain values to forge signatures. So the signer must keep a counter &mdash; "I've used
-          leaves 0, 1, 2... next I use leaf 3." That counter is the <strong class="text-text-primary">state</strong>.
-        </p>
-
-        <!-- State visualization -->
-        <div class="rounded-xl border border-btc-orange/30 bg-btc-orange/5 p-6 mb-6">
-          <div class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">The danger of state</div>
-          <div class="space-y-4 text-sm text-text-secondary">
-            <div class="flex items-start gap-3">
-              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">1</span>
-              <div><strong class="text-text-primary">Wallet restore from seed.</strong> You restore a wallet from your mnemonic phrase. The counter is gone. Your next signature might reuse a leaf that was already used before the restore &mdash; <span class="text-btc-orange">security silently broken</span>.</div>
-            </div>
-            <div class="flex items-start gap-3">
-              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">2</span>
-              <div><strong class="text-text-primary">Two devices, same key.</strong> Your phone and laptop both have the same key. Both think the counter is at leaf 5. Both sign different messages with leaf 5 &mdash; <span class="text-btc-orange">forgery possible</span>.</div>
-            </div>
-            <div class="flex items-start gap-3">
-              <span class="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-btc-orange/20 flex items-center justify-center text-xs text-btc-orange font-bold">3</span>
-              <div><strong class="text-text-primary">Backup restored.</strong> You restore yesterday's backup. The counter rewinds. Today's signatures reuse yesterday's leaves &mdash; <span class="text-btc-orange">undetectable compromise</span>.</div>
-            </div>
-          </div>
-        </div>
-
-        <p class="mb-6 text-text-secondary">
-          For Bitcoin wallets, state is <strong class="text-text-primary">poison</strong>.
-          Wallet seeds are designed to be restored from a mnemonic phrase alone. Hardware
-          wallets and software wallets may share the same seed. There's no reliable way
-          to synchronize a counter across all devices. XMSS alone is too dangerous for Bitcoin.
+        <p class="mt-4 text-sm text-text-secondary">
+          That 64&times; size increase is the price of building a signature out
+          of nothing but hashing.
         </p>
       </section>
 
-      <!-- Section 7: How SPHINCS+ Eliminates State -->
+      <!-- Section 12: How Quantroot Uses SPHINCS+ -->
       <section class="mb-16">
-        <h2 class="mb-6 text-2xl font-bold">How SPHINCS+ Eliminates State</h2>
+        <h2 class="mb-6 text-2xl font-bold">How Quantroot Uses SPHINCS+</h2>
         <p class="mb-6 text-text-secondary">
-          SPHINCS+ solves this with a simple insight: instead of a counter, use the
-          <strong class="text-text-primary">message itself</strong> to choose which leaf to use.
+          SPHINCS+ is not used alone in Bitcoin. Quantroot's soft fork pairs it
+          with Schnorr in a <strong class="text-text-primary">hybrid</strong>
+          Tapscript leaf:
         </p>
 
-        <!-- Stateful vs stateless comparison -->
-        <div class="grid gap-6 md:grid-cols-2 mb-8">
-          <div class="rounded-xl border border-btc-orange/30 bg-surface-raised p-6">
-            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-btc-orange">XMSS (Stateful)</div>
-            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
-              <div class="text-text-secondary">counter = <span class="text-btc-orange">load_from_disk()</span></div>
-              <div class="text-text-secondary">leaf = counter</div>
-              <div class="text-text-secondary">sign(message, leaf)</div>
-              <div class="text-text-secondary">counter += 1</div>
-              <div class="text-text-secondary"><span class="text-btc-orange">save_to_disk(counter)</span></div>
-            </div>
-            <p class="text-xs text-text-secondary">
-              If the counter is lost, corrupted, or reused across devices,
-              security is silently broken.
-            </p>
-          </div>
-          <div class="rounded-xl border border-quantum/30 bg-surface-raised p-6">
-            <div class="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-quantum">SPHINCS+ (Stateless)</div>
-            <div class="rounded-lg bg-surface-overlay p-4 font-mono text-sm leading-relaxed mb-3">
-              <div class="text-text-secondary">leaf = <span class="text-quantum">PRF(secret, message)</span></div>
-              <div class="text-text-secondary">sign(message, leaf)</div>
-              <div class="text-text-secondary"><span class="text-quantum">// no state to save</span></div>
-            </div>
-            <p class="text-xs text-text-secondary">
-              The message deterministically selects the leaf. Same message = same
-              leaf = same signature (safe). Different message = different leaf (safe).
-            </p>
-          </div>
+        <div class="rounded-xl border border-border bg-surface-raised p-6 font-mono text-sm mb-6 overflow-x-auto">
+          <span class="text-quantum">&lt;sphincs_pk&gt;</span>
+          <span class="text-text-primary">OP_CHECKSPHINCSVERIFY</span>
+          <span class="text-text-secondary">OP_DROP</span>
+          <span class="text-btc-orange">&lt;schnorr_pk&gt;</span>
+          <span class="text-text-primary">OP_CHECKSIG</span>
         </div>
 
         <p class="mb-6 text-text-secondary">
-          The pseudorandom function <code class="text-text-primary">PRF(secret, message)</code>
-          maps each message to a leaf index in the hypertree. With 2<sup>32</sup> possible leaves
-          (tree height 32), the probability of two different messages selecting the same leaf is
-          negligible. No counter needed. No disk state. No synchronization between devices.
+          The 4,080-byte SPHINCS+ signature is carried in the Taproot
+          <strong class="text-text-primary">annex</strong> &mdash; a dedicated
+          witness field &mdash; rather than on the script stack, which has a
+          520-byte element limit.
         </p>
-
-        <!-- Benefits -->
-        <div class="grid gap-4 md:grid-cols-3">
-          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&#x21bb;</div>
-            <div class="text-sm font-semibold mb-1">Restore from seed</div>
-            <div class="text-xs text-text-secondary">Mnemonic phrase is the only backup. Same seed reproduces the same SPHINCS+ key. No counter to recover.</div>
-          </div>
-          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&#x1F4F1;</div>
-            <div class="text-sm font-semibold mb-1">Multiple devices</div>
-            <div class="text-xs text-text-secondary">Phone and laptop can use the same key safely. Each transaction picks its own leaf from the message hash.</div>
-          </div>
-          <div class="rounded-xl border border-border bg-surface-raised p-5 text-center">
-            <div class="mb-3 mx-auto h-10 w-10 rounded-full bg-quantum/10 flex items-center justify-center text-xl text-quantum">&infin;</div>
-            <div class="text-sm font-semibold mb-1">Unlimited signatures</div>
-            <div class="text-xs text-text-secondary">One SPHINCS+ key per Bitcoin account. Signs any number of UTXOs without security degradation.</div>
-          </div>
-        </div>
+        <p class="text-text-secondary">
+          Before the soft fork activates,
+          <code class="text-text-primary">OP_CHECKSPHINCSVERIFY</code> is a
+          no-op: the script still passes or fails on the Schnorr check. That
+          keeps quantum-insured outputs spendable on today's mainnet and lets
+          wallets opt in now. After activation, the SPHINCS+ check becomes
+          mandatory and the output is protected against both classical
+          <em>and</em> quantum key recovery.
+        </p>
       </section>
 
       <!-- Back links -->
@@ -494,13 +1007,6 @@ import Footer from "../components/Footer.astro";
     const tree = document.getElementById('merkleTree');
     const treeStatus = document.getElementById('treeStatus');
     if (!tree || !treeStatus) return;
-
-    const authPaths: Record<string, { path: string[]; edges: string[] }> = {
-      l0: { path: ['l0', 'l1', 'h23', 'root'], edges: ['h01-l0', 'root-h01'] },
-      l1: { path: ['l1', 'l0', 'h23', 'root'], edges: ['h01-l1', 'root-h01'] },
-      l2: { path: ['l2', 'l3', 'h01', 'root'], edges: ['h23-l2', 'root-h23'] },
-      l3: { path: ['l3', 'l2', 'h01', 'root'], edges: ['h23-l3', 'root-h23'] },
-    };
 
     const siblingOf: Record<string, string> = { l0: 'l1', l1: 'l0', l2: 'l3', l3: 'l2' };
     const parentSibling: Record<string, string> = { l0: 'h23', l1: 'h23', l2: 'h01', l3: 'h01' };
