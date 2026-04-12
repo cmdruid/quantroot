@@ -2,16 +2,14 @@
 
 **SPHINCS+** (standardized as SLH-DSA in NIST FIPS 205) is a
 post-quantum digital signature scheme. It replaces the elliptic-curve
-math behind Bitcoin's current signatures with nothing but **hash
-functions** — the same one-way primitives behind `SHA-256` and Bitcoin
-block hashes. That substitution is what makes it safe against quantum
-computers.
+math behind ECDSA and Schnorr with nothing but **hash functions** —
+the one-way primitives behind `SHA-256` — which is what makes it safe
+against quantum computers.
 
-This guide walks from the ground up. It starts with the basics — what
-a digital signature even is, what a hash function is, why today's
-signatures are in trouble — and then builds up the pieces of SPHINCS+
-one at a time until the full scheme clicks into place. No prior
-cryptography background is assumed.
+This guide walks through the internals of SPHINCS+ from the bottom
+up: WOTS+ hash chains, Merkle-tree aggregation into XMSS, the
+stateful-signing problem, stateless leaf selection via a PRF, the
+hypertree, FORS, and Quantroot's concrete parameter choices.
 
 ---
 
@@ -40,303 +38,130 @@ A few terms you will bump into along the way:
 
 ---
 
-## What is a Digital Signature?
+## Prerequisites
 
-Before getting into SPHINCS+, it's worth being precise about what a
-signature scheme actually *does*. A digital signature is a piece of
-math that proves three things at once:
+This guide assumes passing familiarity with a few cryptographic
+primitives. If you'd like a refresher, the links below go to
+general-purpose introductions:
 
-1. **Who signed it.** Only the holder of a specific private key could
-   have produced this signature.
-2. **What they signed.** The signature is tied to one exact message.
-   Change a single byte of the message and the signature no longer
-   matches.
-3. **That anyone can check it.** A third party can verify the above
-   using only the public key — without talking to the signer, and
-   without learning the private key.
+- **Digital signatures** — a piece of math that proves *"I, holder of
+  this private key, authorized this exact message."* See
+  [Wikipedia: Digital signature](https://en.wikipedia.org/wiki/Digital_signature).
+- **Cryptographic hash functions** — one-way fingerprints over
+  arbitrary data, like `SHA-256`. See
+  [Wikipedia: Cryptographic hash function](https://en.wikipedia.org/wiki/Cryptographic_hash_function).
+- **Merkle trees** — binary hash trees that commit to many values
+  under a single root. See
+  [Wikipedia: Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree).
+  We'll revisit these below, since XMSS is built on them.
 
-You can think of it as a wax seal, but made of math. Only the person
-with the signet ring (the private key) can stamp it, and anyone with a
-picture of the seal (the public key) can tell whether a document was
-stamped by the real ring or a forgery.
+Two things worth keeping in mind as you read on:
 
-### Why Bitcoin needs signatures
-
-Every Bitcoin transaction is, at heart, a claim: *"I want to move
-these coins to that address."* Signatures are how the network decides
-whether to believe you. When you spend a UTXO, your wallet produces a
-signature over the transaction data, and every node on the network
-independently verifies it. If the signature is valid, the coins move.
-If it isn't, the transaction is rejected.
-
-### What happens if a signature scheme breaks
-
-If the math underneath a signature scheme is solved, the consequences
-are severe. An attacker could produce valid-looking signatures for
-transactions you never authorized, and every Bitcoin node on the
-planet would accept them. Any wallet whose public key the attacker can
-recover becomes drainable.
-
-That "recover the public key" caveat matters: Bitcoin addresses are
-*hashes* of public keys, so funds sitting at a never-used address are
-safe even if ECDSA breaks. But the moment you spend from an address,
-its public key is revealed on-chain, and any change that went back to
-the same address is suddenly at risk. Post-quantum signatures exist to
-make sure that window of vulnerability never opens.
-
----
-
-## What is a Hash Function?
-
-SPHINCS+ is built almost entirely out of hash functions, so it's worth
-a minute to define what one is. A **hash function** is a kind of
-one-way blender for data. You feed in any input — a word, a file, a
-whole book, a Bitcoin transaction — and you get back a fixed-size
-fingerprint of that input, typically 256 bits (32 bytes). The hash
-function Bitcoin uses internally is called **SHA-256**.
-
-Three properties make hash functions useful for cryptography:
-
-- **Fast one-way.** Computing `H(x)` from `x` takes microseconds.
-- **Impossible to reverse.** Given the fingerprint `H(x)`, there is no
-  known way to recover the input `x`. Finding *any* input that hashes
-  to a chosen target would take longer than the age of the universe,
-  by an enormous margin.
-- **Tiny changes ripple out.** Flipping a single bit of the input
-  produces a completely different-looking fingerprint. There is no way
-  to "nudge" a hash in a specific direction.
-
-Cryptographers have more formal names for these properties:
-
-- **Preimage resistance** — given `H(x)`, you can't find `x`.
-- **Second-preimage resistance** — given one input `x`, you can't find
-  a different input `x'` with the same hash.
-- **Collision resistance** — you can't find *any* two different inputs
-  that hash to the same value.
-
-That's the whole toolkit SPHINCS+ is built from. No modular
-arithmetic, no elliptic curves, no secret algebra — just a one-way
-blender applied over and over again in clever patterns. The rest of
-this guide is really just "here are the clever patterns."
+- Hash functions are **one-way**. Computing `H(x)` from `x` is
+  trivial; going backwards from `H(x)` to `x` is infeasible. That
+  asymmetry is the *only* hard problem SPHINCS+ depends on.
+- In Bitcoin, a broken signature scheme means an attacker can spend
+  coins from any address whose public key has been revealed on-chain
+  — i.e., any address that has been spent from. Post-quantum
+  signatures exist to keep that window closed.
 
 ---
 
 ## Why Hash-Based Signatures?
 
-Every signature scheme rests on some math problem that is hard to reverse.
-For Bitcoin's current signatures — ECDSA and Schnorr — that problem is the
-**elliptic curve discrete logarithm problem** (ECDLP).
+Bitcoin's current signatures — ECDSA and Schnorr — rest on the
+**elliptic curve discrete logarithm problem** (ECDLP). A private key
+is a random 256-bit integer `d`. The public key is a point `P = d·G`
+on the `secp256k1` curve. Computing `P` from `d` is fast; recovering
+`d` from `P` takes roughly `2¹²⁸` operations on a classical computer —
+effectively infinite.
 
-### How ECDSA works (at a glance)
+In 1994 Peter Shor published a quantum algorithm that solves
+discrete-log (and integer factoring) in polynomial time. A large,
+fault-tolerant quantum computer running Shor's could recover `d`
+from `P` in hours. This would break ECDSA, Schnorr, RSA, and every
+other scheme whose security reduces to discrete-log or factoring.
+Nobody has built such a machine yet, but cryptographic standards
+move slowly, and coins safe today need to stay safe in a decade.
 
-A private key is a random 256-bit integer `d`. The public key is a point
-`P = d·G` on the `secp256k1` curve — you multiply the generator point `G`
-by the secret scalar `d`. Multiplication on the curve is fast. But the
-reverse direction — given `P` and `G`, recover `d` — is believed to be
-infeasible on classical computers. The best known classical attack takes
-roughly `2¹²⁸` operations, which is out of reach.
+Hash functions don't have the algebraic structure Shor's exploits.
+The best known quantum attack against a hash function is **Grover's
+algorithm**, a general-purpose speedup for brute-force search. Grover
+only provides a *quadratic* speedup (`2ⁿ → 2^(n/2)`), which is easy
+to absorb by using a larger hash output. A 256-bit hash still
+provides 128-bit security against a quantum attacker — the same
+level Bitcoin's Schnorr already targets.
 
-When you sign a message, you combine `d` with a per-message nonce and the
-message hash in a way that lets a verifier check, using only `P`, that the
-signer knew `d` without revealing it. The whole scheme's security reduces
-to "recovering `d` from `P` is hard."
-
-To put `2¹²⁸` in perspective: if every computer on Earth today worked
-on cracking a single key, the sun would burn out first. This is the
-"hard problem" Bitcoin's current signatures depend on.
-
-### The quantum problem
-
-In 1994 Peter Shor published an algorithm that, when run on a quantum
-computer, solves the discrete-log problem (and the closely related
-integer-factoring problem) in **polynomial time** — roughly, "fast
-enough to matter in practice." A sufficiently large, fault-tolerant
-quantum computer running Shor's algorithm could recover the private
-key `d` from the public key `P` in hours instead of the effectively
-infinite `2¹²⁸` operations it would take classically.
-
-This doesn't just break ECDSA — it breaks everything in the same
-family: Schnorr, DSA, Diffie-Hellman, RSA. Any scheme whose security
-depends on discrete-log or factoring is at risk the moment a large
-quantum computer exists.
-
-Importantly, nobody has built such a machine yet. Current quantum
-computers are far too small and noisy to run Shor's algorithm on a
-256-bit key. But cryptographic standards are slow to change, and
-coins that are safe today need to stay safe in a decade. That's why
-the work is happening now.
-
-### Why hashing survives
-
-Hash functions don't rely on the kind of algebraic structure Shor's
-algorithm exploits. The best known quantum attack against a hash
-function is **Grover's algorithm** — a general-purpose quantum
-speedup for brute-force search. But Grover only provides a *quadratic*
-speedup: it turns a `2ⁿ` search into a `2^(n/2)` search. That's a real
-effect, but easy to absorb. Simply use a larger hash output and you're
-back where you started. A 256-bit hash still provides 128-bit security
-against a quantum attacker — the same level Bitcoin's Schnorr already
-targets.
-
-So the plan is: build a signature scheme where the only hard problem
-is "invert a hash function," and we get post-quantum security for
-free.
+Build a signature scheme whose only hard problem is "invert a hash
+function," and you get post-quantum security for free.
 
 ---
 
 ## Building Block 1: WOTS+ (Hash Chains)
 
-The Winternitz One-Time Signature (WOTS+) scheme is the first real
-hash-based signature we'll meet. It starts from an idea you have
-probably already seen in Bitcoin: a **hash commitment**.
-
-### Starting point: hash commitments
-
-To prove later that you knew a secret `s`, publish `H(s)` today. When
-you eventually reveal `s`, anyone can compute `H(s)` and check it
-against the value you committed to. Nobody can forge this because
-inverting `H` is infeasible.
+The Winternitz One-Time Signature (WOTS+) scheme is the first
+primitive we'll build from scratch. The core idea is a **hash chain**:
+pick a random secret `s` and hash it `w` times in a row. The end of
+the chain is the public key.
 
 ```
-commit → H(s)       (published today, keeps s secret)
-reveal → s          (published later)
-verify → H(s) == commit ?
+s → H(s) → H²(s) → H³(s) → ... → H^w(s)
+↑                                 ↑
+secret                            public key
 ```
 
-Lightning Network invoices work exactly this way. The receiver picks a
-random preimage `s`, hashes it, and puts `H(s)` — the *payment hash* —
-into the invoice. A payment is routed across the network with the
-condition "release funds only against a preimage that hashes to `H(s)`."
-When the receiver reveals `s` to claim the payment, every routing node
-along the path can independently verify `H(s)` and forward the
-settlement. No signature, no key exchange — just a hash.
-
-A single commitment like this isn't yet a digital signature: it only
-proves knowledge of one pre-agreed secret, once. WOTS+ takes the same
-primitive and stretches it into something much more powerful by
-chaining many hashes together and using the *position* in the chain to
-encode a message.
-
-### The core trick: a hash chain
-
-Pick a random secret `s`. Apply the hash function `H` to it `w` times in
-a row:
-
-```
-s → H(s) → H(H(s)) → ... → H^w(s)
-```
-
-The secret key is `s`. The public key is `H^w(s)` — the end of the chain.
-Because hashing is one-way, publishing `H^w(s)` reveals nothing about `s`.
-
-Now here is the clever part. To "sign" a digit `d` (where `0 ≤ d < w`),
-you reveal the intermediate hash `H^d(s)`:
-
-```
-signature for digit d:   H^d(s)
-```
-
-A verifier receives your signature and applies `H` an additional `w - d`
-times:
-
-```
-H^(w-d)( H^d(s) ) = H^w(s) = public_key   ✓
-```
-
-If it matches the known public key, the signature is valid.
+To sign a digit `d` (where `0 ≤ d < w`), reveal the intermediate hash
+`H^d(s)`. A verifier applies `H` an additional `w − d` times; if the
+result matches the public key, the signature is valid.
 
 ### A concrete example
 
-Let's walk through this with tiny numbers. Imagine a chain of length
-`w = 16`, and you want to sign the digit `d = 5`.
+Chain of length `w = 16`, sign digit `d = 5`:
 
-1. Pick a random secret `s` (say, a 32-byte value your wallet
-   generates).
-2. Hash it 16 times in a row. Call the final result `H¹⁶(s)`. This is
-   your public key — you publish it.
-3. To sign `d = 5`, reveal `H⁵(s)` — the value at position 5 in your
-   chain. That one value is your signature.
-4. The verifier takes your `H⁵(s)` and hashes it `16 − 5 = 11` more
-   times. If the result matches the published `H¹⁶(s)`, the signature
-   is valid.
+1. Hash your secret `s` sixteen times. Publish `H¹⁶(s)` as the public key.
+2. To sign `d = 5`, reveal `H⁵(s)`. That one value is your signature.
+3. The verifier hashes your `H⁵(s)` eleven more times. If the result
+   equals `H¹⁶(s)`, the signature is valid.
 
-```
- position:   0    1    2    3    4    5    6    7   ...   15    16
- value:      s → H¹ → H² → H³ → H⁴ → H⁵ → H⁶ → H⁷ → ... → H¹⁵ → H¹⁶
-                                       ↑                         ↑
-                                       signature                 public
-                                       for d=5                   key
-```
+Security comes from hash-function asymmetry. The verifier can
+trivially hash forward; a forger trying to sign a *lower* digit would
+need to run `H` backwards, which is exactly what hash functions are
+built to prevent.
 
-The security of the scheme comes from hash-function asymmetry. Given
-`H⁵(s)`, the verifier can trivially move *forward* to `H¹⁶(s)`. But
-a forger trying to sign a *lower* digit — say `d' = 3` — would need
-`H³(s)`, and computing it from `H⁵(s)` would require running the hash
-function backwards. That's the thing hash functions are specifically
-designed to make impossible.
+But an attacker who sees `H⁵(s)` *can* hash forward and claim a
+*higher* digit. WOTS+ closes this hole with a **checksum chain**
+whose digits move in the opposite direction of the message digits.
+Any forward move on a message chain forces a backward move on the
+checksum chain — and forging in both directions at once is infeasible.
 
-You might notice a gap: an attacker who sees `H⁵(s)` *can* hash
-forward to produce `H⁶(s)`, `H⁷(s)`, and so on, and use those to
-claim a *higher* digit. This is exactly what the **checksum chain**
-(described below) closes off.
+### Parameters and one-time use
 
-### What is `w`?
+One chain signs a single `log₂(w)`-bit digit; a full message hash
+needs several chains in parallel plus the checksum chain. The
+Winternitz parameter `w` trades signature size against hashing work:
+higher `w` gives shorter signatures but more hashing. Quantroot uses
+`w = 256`, the maximum FIPS 205 allows, for the smallest possible
+signature.
 
-The **Winternitz parameter** `w` controls the chain length and the
-tradeoff between signature size and computation:
-
-- **Higher `w`** → longer chains → fewer chains needed → shorter
-  signatures, but more hashing to sign and verify.
-- **Lower `w`** → shorter chains → more chains needed → larger
-  signatures, but less hashing.
-
-For Quantroot, `w = 256`, the maximum allowed by FIPS 205. Each chain is
-256 hashes long, and fewer chains are needed, giving the smallest
-signature at the cost of more hashing per sign/verify.
-
-### Signing a whole message
-
-One chain signs one `log₂(w)`-bit digit. To sign a full `n`-byte message
-hash, WOTS+ runs several chains in parallel — one per digit — plus a
-short **checksum** chain whose digits move in the opposite direction, so
-any forger who tries to advance one message digit would also have to
-hash *backward* on the checksum chain, which is infeasible. The
-signature is the collection of intermediate hashes `H^dᵢ(sᵢ)`, one per
-chain. The public key is the collection of chain endpoints.
-
-The catch is: **you can only ever sign one message**. If you sign a
-second message with the same WOTS+ key, an attacker sees two
-intermediate hashes in the same chain and can hash either of them
-forward to any further digit — enough to forge a signature on many
-other messages. WOTS+ is **one-time by construction**.
-
-One-time signatures are not very useful by themselves. We need a way to
-combine many WOTS+ keys behind a single public key.
+The catch: **one WOTS+ key signs exactly one message**. Signing a
+second message with the same key exposes two intermediate hashes in
+the same chain, letting an attacker hash either of them forward to
+forge signatures on many other messages. WOTS+ is one-time by
+construction, which is why we need the next building block.
 
 ---
 
 ## Building Block 2: Merkle Trees
 
-Merkle trees are a general-purpose primitive, older than Bitcoin itself.
-XMSS — the next building block — is simply "put WOTS+ keys at the leaves
-of a Merkle tree," so it's worth a brief refresher.
+XMSS is just "put WOTS+ keys at the leaves of a Merkle tree," so it's
+worth spelling out exactly what property we're going to use from
+Merkle trees. (If the construction itself is new to you, see
+[Wikipedia: Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree)
+first.)
 
-Think of a Merkle tree as a **family tree made of fingerprints**. Each
-person in the tree is a fingerprint built by blending the fingerprints
-of their two children. The ancestor at the top of the tree has a single
-fingerprint that is, by construction, a blend of every descendant in
-the family. If you trust that root fingerprint, you can verify any
-single descendant's identity by walking back up the tree through their
-parents — and you only need to know the fingerprints of *their siblings
-at each level*, not the whole family.
-
-### The construction
-
-A Merkle tree is a binary tree where:
-
-- **Leaves** contain hashes of arbitrary values (in our case, WOTS+ public keys).
-- **Internal nodes** contain the hash of their two children concatenated.
-- **Root** is a single hash that commits to every leaf.
+A Merkle tree is a binary tree where each internal node is the hash
+of its two children concatenated. The single **root** hash commits
+to every value at the leaves.
 
 ```
                 Root = H(H01 || H23)
@@ -344,40 +169,22 @@ A Merkle tree is a binary tree where:
         H01 = H(H0||H1)      H23 = H(H2||H3)
          /        \            /         \
        H0          H1        H2           H3
-       |           |          |           |
-     value_0    value_1    value_2     value_3
 ```
 
-### Authentication paths
-
-To prove that a specific leaf `value_1` is included in the tree, you
-provide the **authentication path**: the sibling hashes at each level on
-the way from the leaf to the root.
-
-```
-Proving leaf 1 (value_1):
-
-   Auth path = [H0, H23]
-
-   Verifier computes:
-     leaf_hash = H(value_1)           (hash the claimed leaf)
-     node      = H(H0 || leaf_hash)   (combine with sibling H0)
-     root'     = H(node || H23)       (combine with sibling H23)
-
-   Check: root' == known_root ?  ✓
-```
-
-The proof size is `log₂(n)` hashes for a tree with `n` leaves. A million
-leaves costs twenty hashes. That logarithmic scaling is why Merkle trees
-show up anywhere you need to commit to lots of data under a single root:
-Bitcoin blocks, Git objects, certificate transparency logs — and XMSS.
+Any individual leaf can be proven in the tree with `log₂(n)` sibling
+hashes — the **authentication path**. To prove leaf 1 is in the tree,
+supply `[H0, H23]`; the verifier hashes up from the leaf and checks
+against the published root. That logarithmic proof size is the only
+property XMSS cares about.
 
 ---
 
 ## Building Block 3: XMSS (Merkle Tree of WOTS+ Keys)
 
-XMSS — the eXtended Merkle Signature Scheme — is exactly what the section
-heading says: a Merkle tree whose leaves are WOTS+ public keys.
+XMSS — the eXtended Merkle Signature Scheme — is exactly what the
+name suggests: a Merkle tree whose leaves are WOTS+ public keys. The
+XMSS public key is the Merkle root, a single hash that commits to
+every WOTS+ keypair underneath.
 
 ```
                       Root
@@ -390,40 +197,17 @@ heading says: a Merkle tree whose leaves are WOTS+ public keys.
                0    1    2    3
 ```
 
-The XMSS public key is just the **Merkle root**. That one hash commits to
-every WOTS+ public key at the leaves.
+To sign message `i`, use `WOTS+ keypair i` and attach the
+authentication path from leaf `i` to the root. The resulting
+signature is `(i, WOTS+ signature, auth path)`. A verifier
+reconstructs the WOTS+ public key from the signature, walks the auth
+path, and checks the recomputed root against the XMSS public key.
 
-Picture it as a **key ring** with many one-use stamps hanging off it.
-Each stamp has its own unique seal (a WOTS+ keypair), and the ring
-itself has a tiny engraved label (the Merkle root) that certifies *"all
-of these stamps are mine."* To stamp a document, you pick an unused
-stamp from the ring, press it onto the document, and attach a short
-proof that the stamp belongs to this ring. The ring's label never
-changes, no matter which stamp you used.
-
-### Signing with XMSS
-
-To sign message number `i`:
-
-1. Pick an unused leaf — say, leaf `i`.
-2. Sign the message with `WOTS+ keypair i`.
-3. Include the **authentication path** from leaf `i` to the root.
-
-The signature is `(i, WOTS+ signature, auth path)`. To verify:
-
-1. Reconstruct the WOTS+ public key from the signature.
-2. Hash it to get `leaf_hash`.
-3. Walk up the auth path, hashing sibling-by-sibling, until you reach a root.
-4. Compare against the known XMSS root.
-
-A tree of height `h` gives you `2^h` one-time keypairs, so you can sign
-up to `2^h` messages under a single public key. You've turned one-time
-signatures into many-time signatures.
-
-### What could go wrong
-
-Every leaf is still a WOTS+ key. WOTS+ is still one-time. Which brings
-us to the problem the next section is about.
+A tree of height `h` gives `2^h` one-time keypairs, so you can sign
+up to `2^h` messages under a single XMSS key — one-time signatures
+turned into many-time signatures. But every leaf is still a WOTS+
+key, and WOTS+ is still one-time, which brings us to the problem the
+next section is about.
 
 ---
 
@@ -465,27 +249,16 @@ something that doesn't require remembering anything at all.
 
 ## SPHINCS+: Stateless via PRF
 
-Here's the insight that makes SPHINCS+ work:
+The insight that makes SPHINCS+ work: instead of remembering which
+leaf you've used, **derive the leaf from the message itself**.
 
-> Instead of remembering which leaf you've used, derive the leaf from the
-> message itself.
-
-Specifically, SPHINCS+ uses a **pseudorandom function** (PRF) keyed by
-a secret. A PRF is a function whose output *looks* completely random
-to anyone who doesn't know the secret key, but is perfectly
-deterministic for anyone who does — same inputs always produce the
-same output. You can build one out of a hash function in a few lines
-of code, and SPHINCS+ does.
+SPHINCS+ uses a **pseudorandom function** (PRF) keyed by a secret —
+a function whose output looks random without the key but is perfectly
+deterministic with it. Same inputs always produce the same output.
 
 ```
 leaf_index = PRF(sk_prf, message_hash)
 ```
-
-The same message always maps to the same leaf. Different messages map
-to essentially random, uncorrelated leaves. No counter. No disk. No
-synchronization between devices.
-
-### Stateful vs stateless, side by side
 
 ```
 XMSS (stateful):                    SPHINCS+ (stateless):
@@ -496,119 +269,80 @@ XMSS (stateful):                    SPHINCS+ (stateless):
   save_to_disk(counter)
 ```
 
-This one change gets us past every failure mode from the previous
-section. Same seed reproduces the same PRF and picks the same leaves.
-Two devices with the same key pick the same leaf for the same message.
+Every failure mode from the previous section evaporates. The same
+seed reproduces the same PRF and picks the same leaves. Two devices
+with the same key land on the same leaf for the same message.
 Restored backups don't affect leaf selection. There is simply nothing
 for the signer to track.
 
 ### But one XMSS tree isn't big enough
 
-A deterministic leaf selection has a price: if two messages happen to
-collide on the same leaf, you do get WOTS+-style reuse, with all the
-forgeability that implies. To make that collision probability
-astronomically small you need a *huge* number of possible leaves —
-Quantroot targets `2³²`, roughly four billion. For context, that's
-more than the total number of Bitcoin transactions ever made, several
-times over; it's also many more transactions than any one wallet will
-ever realistically produce.
-
-A single XMSS tree of height 32 is impractical: generating the root
-requires hashing every one of its four billion leaves. Signing the
-first message would take forever.
-
-The fix is to build the tree out of smaller trees.
+Deterministic leaf selection has one cost: if two messages collide
+on the same leaf, you get WOTS+-style reuse. To keep that collision
+probability astronomically small, SPHINCS+ needs a *huge* number of
+possible leaves — Quantroot targets `2³²`, roughly four billion. A
+single XMSS tree of height 32 is impractical to build: generating
+the root alone requires hashing every one of its four billion
+leaves. The fix is to compose the tree out of smaller trees.
 
 ---
 
 ## The Hypertree
 
-SPHINCS+ stacks multiple XMSS trees into a **hypertree** — a tree of
-trees — with FORS instances at the very bottom.
-
-Think of it as a **nested filing cabinet**. The top drawer of the
-cabinet contains a handful of folders, each of which in turn is a
-smaller cabinet with its own drawers. Dig down a few levels and you
-reach the actual documents. The public key on the front of the
-cabinet is a single label — one short string — that certifies
-everything stored inside, no matter how deep. You never have to open
-the whole cabinet to prove a single document is in there; you only
-walk the chain of drawers that contain it.
-
-Concretely:
+SPHINCS+ stacks `d` smaller XMSS trees into a **hypertree** — a tree
+of trees — with a dedicated few-time signer at the very bottom.
 
 ```
-Layer d-1 (top):     [XMSS tree]            ← root is the SPHINCS+ public key
+Layer d-1 (top):     [XMSS tree]              ← root is the SPHINCS+ public key
                        /        \
-Layer d-2:      [XMSS tree]  [XMSS tree]    ← each signed by a leaf in the layer above
+Layer d-2:      [XMSS tree]  [XMSS tree]      ← signed by WOTS+ leaves above
                   /    \       /    \
                 ...    ...   ...    ...
 
-Layer 0 (bottom): [XMSS]   [XMSS]   ...   [XMSS]   ← each leaf signs a FORS key
-                    |        |               |
-                  [FORS]   [FORS]         [FORS]   ← signs the actual message hash
+Layer 0 (bottom):  [XMSS]  [XMSS]  ...  [XMSS]
+                     |       |            |
+                 [few-time] [few-time] [few-time]  ← signs the message hash
 ```
 
-Each XMSS tree is small (height `h/d`), so computing its root is cheap.
-The "signature" at each layer above 0 is really a WOTS+ signature on the
-root hash of the tree directly below. A leaf in the bottom XMSS tree is
-the hash of a FORS public key; that FORS key is what actually signs the
-message.
+Each XMSS tree has small height `h/d`, so its root is cheap to
+compute. The "signature" at each layer above 0 is really a WOTS+
+signature on the root of the tree directly below. At the very bottom,
+each leaf of the lowest XMSS tree points to a fresh instance of a
+special few-time scheme that actually signs the message hash. The
+next section covers that scheme.
 
 ### Signing
 
-1. Hash the message and use `PRF(sk_prf, ·)` to pick:
-   - a FORS instance (determines which bottom-XMSS leaf to land on), and
-   - a message hash for FORS to sign.
-2. FORS signs the message hash, producing a FORS signature.
-3. The FORS public key is a leaf in the bottom XMSS tree. Provide the
-   authentication path up to that tree's root.
-4. That root is signed by a WOTS+ key in the XMSS tree one layer up.
-   Provide the authentication path up to *its* root.
-5. Repeat until you reach the top XMSS root — the SPHINCS+ public key.
+1. Use `PRF(sk_prf, message)` to pick a bottom-layer instance.
+2. The few-time scheme at that instance signs the message hash.
+3. Provide the authentication path from the instance's leaf up to
+   the bottom-XMSS root.
+4. That root is WOTS+-signed in the layer above; provide its auth
+   path.
+5. Repeat until you reach the top-XMSS root — the SPHINCS+ public
+   key.
 
-### Verifying
+Verification runs the chain in reverse: verify the few-time
+signature, hash its public key into a leaf, walk the auth path to a
+root, verify that root as a WOTS+-signed message in the layer above,
+and continue until the top root matches the SPHINCS+ public key.
 
-Run the same chain in reverse:
-
-1. Verify the FORS signature against the message hash → FORS public key.
-2. Hash it into a leaf → walk the bottom XMSS auth path → get a root.
-3. Verify that root as a WOTS+ signed message in the layer above → get a leaf → walk *that* auth path → get another root.
-4. Continue until you reach the top root. It must equal the SPHINCS+
-   public key.
-
-The genius of the construction is that a single `2^h` leaf capacity is
-spread across `d` layers, so no single tree is ever bigger than `2^(h/d)`.
-Signing touches one small tree per layer, not one giant tree. Verification
-does the same amount of work.
-
-The one remaining piece is the thing at the very bottom — the scheme
-that actually signs the message hash.
+The `2^h` leaf capacity is spread across `d` layers, so no single
+tree is ever bigger than `2^(h/d)`. Signing and verification each
+touch one small tree per layer, not one giant tree.
 
 ---
 
 ## Building Block 4: FORS (Forest of Random Subsets)
 
-FORS — Forest Of Random Subsets — is the signature scheme at the bottom
-of the hypertree. It signs the message hash directly, and it is a
-**few-time** signature: safe to sign a small number of messages rather
-than exactly one.
+FORS — Forest Of Random Subsets — is the few-time scheme at the
+bottom of the hypertree. Unlike WOTS+, it signs the full message
+hash directly, and it tolerates a small number of reuses before
+collapsing.
 
-Think of FORS as a **multi-dial combination lock**. A standard
-combination lock has one dial and one correct number; FORS has `k`
-dials, each drawn from its own set of possible values. To "sign" a
-message, you don't reveal the whole combination — only the specific
-digit the message points to on each dial, plus enough context (an
-authentication path within each mini-tree) for the verifier to check
-that digit is genuinely part of your lock. Different messages light up
-different dial positions, so each signature reveals a different subset
-of your secrets.
-
-### Structure
-
-A FORS key is `k` small Merkle trees, each of height `a`. Each tree has
-`2^a` leaves, and each leaf is a secret value. The FORS public key is the
-hash of all `k` tree roots concatenated.
+A FORS key is `k` small Merkle trees, each of height `a`. Each leaf
+is a secret value. The FORS public key is the hash of all `k` tree
+roots concatenated.
 
 ```
 Tree 0          Tree 1       ...    Tree k-1
@@ -621,32 +355,28 @@ Tree 0          Tree 1       ...    Tree k-1
 secret              secret           secret
 ```
 
-### Signing
-
-To sign a message hash `m`, split `m` into `k` indices, one per tree.
-Each index points at a specific leaf. To produce the FORS signature,
-reveal **one leaf per tree** (the secret value itself), plus the
-authentication path to its tree's root.
+To sign a message hash `m`, split it into `k` indices, one per tree.
+Each index points at a specific leaf. The FORS signature reveals
+**one leaf per tree** (the secret value itself) plus the
+authentication path from that leaf up to its tree's root.
 
 ```
 message_hash → split → (i₀, i₁, ..., i_{k-1})
-FORS signature: [ leaf(i₀) + auth₀, leaf(i₁) + auth₁, ..., leaf(i_{k-1}) + auth_{k-1} ]
+FORS signature: [ leaf(i₀) + auth₀, ..., leaf(i_{k-1}) + auth_{k-1} ]
 ```
 
-### Why "few-time"?
+### Why few-time?
 
-Different messages typically produce different indices — a different
-leaf revealed in each tree. But if two messages happen to overlap in
-*some* but not all trees, an attacker can mix revealed leaves from both
-signatures and cobble together a forgery for a third message.
+If two messages overlap in *some* but not all trees, an attacker can
+mix revealed leaves from both signatures and forge a third message.
+The probability of overlap grows quickly with the number of messages
+signed under one FORS key, so a single FORS instance is only safe
+for a handful of signatures.
 
-The probability of that happening grows quickly with the number of
-messages signed, so FORS is only safe for a small number of signatures
-under the same key. SPHINCS+ handles this by using a **fresh FORS key
-per signature** — which is exactly what the hypertree provides. Each
-bottom-XMSS leaf points to its own FORS instance, and the PRF makes
-sure that different messages almost always land on different leaves.
-The few-time safety budget resets with every signature.
+SPHINCS+ sidesteps this by using a **fresh FORS key per signature**.
+The PRF picks a different bottom-XMSS leaf for almost every message,
+and each leaf points to its own FORS instance. The few-time safety
+budget resets every time.
 
 ---
 
