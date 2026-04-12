@@ -1,15 +1,17 @@
 # Understanding SPHINCS+ Signatures
 
-SPHINCS+ (standardized as SLH-DSA in NIST FIPS 205) is a post-quantum
-digital signature scheme. It replaces the elliptic-curve math behind ECDSA
-and Schnorr with nothing but **hash functions** — the same primitives you
-already know from `SHA-256`, HMAC, and block explorers. That substitution
-is what makes it safe against quantum computers.
+**SPHINCS+** (standardized as SLH-DSA in NIST FIPS 205) is a
+post-quantum digital signature scheme. It replaces the elliptic-curve
+math behind Bitcoin's current signatures with nothing but **hash
+functions** — the same one-way primitives behind `SHA-256` and Bitcoin
+block hashes. That substitution is what makes it safe against quantum
+computers.
 
-This guide walks from the ground up: what's wrong with today's signatures,
-how hashing can authenticate a message, how hash chains become a real
-signature scheme, and how SPHINCS+ stitches them all together into a
-practical, stateless construction suitable for Bitcoin wallets.
+This guide walks from the ground up. It starts with the basics — what
+a digital signature even is, what a hash function is, why today's
+signatures are in trouble — and then builds up the pieces of SPHINCS+
+one at a time until the full scheme clicks into place. No prior
+cryptography background is assumed.
 
 ---
 
@@ -38,6 +40,87 @@ A few terms you will bump into along the way:
 
 ---
 
+## What is a Digital Signature?
+
+Before getting into SPHINCS+, it's worth being precise about what a
+signature scheme actually *does*. A digital signature is a piece of
+math that proves three things at once:
+
+1. **Who signed it.** Only the holder of a specific private key could
+   have produced this signature.
+2. **What they signed.** The signature is tied to one exact message.
+   Change a single byte of the message and the signature no longer
+   matches.
+3. **That anyone can check it.** A third party can verify the above
+   using only the public key — without talking to the signer, and
+   without learning the private key.
+
+You can think of it as a wax seal, but made of math. Only the person
+with the signet ring (the private key) can stamp it, and anyone with a
+picture of the seal (the public key) can tell whether a document was
+stamped by the real ring or a forgery.
+
+### Why Bitcoin needs signatures
+
+Every Bitcoin transaction is, at heart, a claim: *"I want to move
+these coins to that address."* Signatures are how the network decides
+whether to believe you. When you spend a UTXO, your wallet produces a
+signature over the transaction data, and every node on the network
+independently verifies it. If the signature is valid, the coins move.
+If it isn't, the transaction is rejected.
+
+### What happens if a signature scheme breaks
+
+If the math underneath a signature scheme is solved, the consequences
+are severe. An attacker could produce valid-looking signatures for
+transactions you never authorized, and every Bitcoin node on the
+planet would accept them. Any wallet whose public key the attacker can
+recover becomes drainable.
+
+That "recover the public key" caveat matters: Bitcoin addresses are
+*hashes* of public keys, so funds sitting at a never-used address are
+safe even if ECDSA breaks. But the moment you spend from an address,
+its public key is revealed on-chain, and any change that went back to
+the same address is suddenly at risk. Post-quantum signatures exist to
+make sure that window of vulnerability never opens.
+
+---
+
+## What is a Hash Function?
+
+SPHINCS+ is built almost entirely out of hash functions, so it's worth
+a minute to define what one is. A **hash function** is a kind of
+one-way blender for data. You feed in any input — a word, a file, a
+whole book, a Bitcoin transaction — and you get back a fixed-size
+fingerprint of that input, typically 256 bits (32 bytes). The hash
+function Bitcoin uses internally is called **SHA-256**.
+
+Three properties make hash functions useful for cryptography:
+
+- **Fast one-way.** Computing `H(x)` from `x` takes microseconds.
+- **Impossible to reverse.** Given the fingerprint `H(x)`, there is no
+  known way to recover the input `x`. Finding *any* input that hashes
+  to a chosen target would take longer than the age of the universe,
+  by an enormous margin.
+- **Tiny changes ripple out.** Flipping a single bit of the input
+  produces a completely different-looking fingerprint. There is no way
+  to "nudge" a hash in a specific direction.
+
+Cryptographers have more formal names for these properties:
+
+- **Preimage resistance** — given `H(x)`, you can't find `x`.
+- **Second-preimage resistance** — given one input `x`, you can't find
+  a different input `x'` with the same hash.
+- **Collision resistance** — you can't find *any* two different inputs
+  that hash to the same value.
+
+That's the whole toolkit SPHINCS+ is built from. No modular
+arithmetic, no elliptic curves, no secret algebra — just a one-way
+blender applied over and over again in clever patterns. The rest of
+this guide is really just "here are the clever patterns."
+
+---
+
 ## Why Hash-Based Signatures?
 
 Every signature scheme rests on some math problem that is hard to reverse.
@@ -58,36 +141,46 @@ message hash in a way that lets a verifier check, using only `P`, that the
 signer knew `d` without revealing it. The whole scheme's security reduces
 to "recovering `d` from `P` is hard."
 
+To put `2¹²⁸` in perspective: if every computer on Earth today worked
+on cracking a single key, the sun would burn out first. This is the
+"hard problem" Bitcoin's current signatures depend on.
+
 ### The quantum problem
 
-In 1994 Peter Shor published an algorithm that runs on a quantum computer
-and solves discrete-log (and integer factoring) in **polynomial time**. A
-sufficiently large, fault-tolerant quantum computer running Shor's
-algorithm could recover the private key `d` from the public key `P` in
-hours instead of `2¹²⁸` operations.
+In 1994 Peter Shor published an algorithm that, when run on a quantum
+computer, solves the discrete-log problem (and the closely related
+integer-factoring problem) in **polynomial time** — roughly, "fast
+enough to matter in practice." A sufficiently large, fault-tolerant
+quantum computer running Shor's algorithm could recover the private
+key `d` from the public key `P` in hours instead of the effectively
+infinite `2¹²⁸` operations it would take classically.
 
-This doesn't just break ECDSA — it breaks everything in the same family:
-Schnorr, DSA, Diffie-Hellman, RSA. Any scheme whose security depends on
-discrete-log or factoring is at risk the moment a large quantum computer
-exists.
+This doesn't just break ECDSA — it breaks everything in the same
+family: Schnorr, DSA, Diffie-Hellman, RSA. Any scheme whose security
+depends on discrete-log or factoring is at risk the moment a large
+quantum computer exists.
+
+Importantly, nobody has built such a machine yet. Current quantum
+computers are far too small and noisy to run Shor's algorithm on a
+256-bit key. But cryptographic standards are slow to change, and
+coins that are safe today need to stay safe in a decade. That's why
+the work is happening now.
 
 ### Why hashing survives
 
-Hash functions like SHA-256 don't rely on algebraic structure. They are
-designed to be:
+Hash functions don't rely on the kind of algebraic structure Shor's
+algorithm exploits. The best known quantum attack against a hash
+function is **Grover's algorithm** — a general-purpose quantum
+speedup for brute-force search. But Grover only provides a *quadratic*
+speedup: it turns a `2ⁿ` search into a `2^(n/2)` search. That's a real
+effect, but easy to absorb. Simply use a larger hash output and you're
+back where you started. A 256-bit hash still provides 128-bit security
+against a quantum attacker — the same level Bitcoin's Schnorr already
+targets.
 
-- **Preimage-resistant**: given `H(x)`, find `x` → infeasible.
-- **Second-preimage-resistant**: given `x`, find `x' ≠ x` with `H(x') = H(x)` → infeasible.
-- **Collision-resistant**: find any `x ≠ x'` with `H(x) = H(x')` → infeasible.
-
-The best known quantum attack is **Grover's algorithm**, which speeds up
-brute-force search by only a **quadratic** factor — `2ⁿ` becomes `2^(n/2)`.
-That's a real effect but easy to absorb: double the hash output size and
-you're back where you started. A 256-bit hash still provides 128-bit
-security against a quantum attacker.
-
-So the plan is: build a signature scheme where the only hard problem is
-"invert a hash function," and we get post-quantum security for free.
+So the plan is: build a signature scheme where the only hard problem
+is "invert a hash function," and we get post-quantum security for
+free.
 
 ---
 
@@ -150,9 +243,42 @@ times:
 H^(w-d)( H^d(s) ) = H^w(s) = public_key   ✓
 ```
 
-If it matches the known public key, the signature is valid. A forger who
-wants to sign a higher digit `d' > d` would have to **invert** `H` to move
-backwards along the chain, which is infeasible.
+If it matches the known public key, the signature is valid.
+
+### A concrete example
+
+Let's walk through this with tiny numbers. Imagine a chain of length
+`w = 16`, and you want to sign the digit `d = 5`.
+
+1. Pick a random secret `s` (say, a 32-byte value your wallet
+   generates).
+2. Hash it 16 times in a row. Call the final result `H¹⁶(s)`. This is
+   your public key — you publish it.
+3. To sign `d = 5`, reveal `H⁵(s)` — the value at position 5 in your
+   chain. That one value is your signature.
+4. The verifier takes your `H⁵(s)` and hashes it `16 − 5 = 11` more
+   times. If the result matches the published `H¹⁶(s)`, the signature
+   is valid.
+
+```
+ position:   0    1    2    3    4    5    6    7   ...   15    16
+ value:      s → H¹ → H² → H³ → H⁴ → H⁵ → H⁶ → H⁷ → ... → H¹⁵ → H¹⁶
+                                       ↑                         ↑
+                                       signature                 public
+                                       for d=5                   key
+```
+
+The security of the scheme comes from hash-function asymmetry. Given
+`H⁵(s)`, the verifier can trivially move *forward* to `H¹⁶(s)`. But
+a forger trying to sign a *lower* digit — say `d' = 3` — would need
+`H³(s)`, and computing it from `H⁵(s)` would require running the hash
+function backwards. That's the thing hash functions are specifically
+designed to make impossible.
+
+You might notice a gap: an attacker who sees `H⁵(s)` *can* hash
+forward to produce `H⁶(s)`, `H⁷(s)`, and so on, and use those to
+claim a *higher* digit. This is exactly what the **checksum chain**
+(described below) closes off.
 
 ### What is `w`?
 
@@ -194,6 +320,15 @@ combine many WOTS+ keys behind a single public key.
 Merkle trees are a general-purpose primitive, older than Bitcoin itself.
 XMSS — the next building block — is simply "put WOTS+ keys at the leaves
 of a Merkle tree," so it's worth a brief refresher.
+
+Think of a Merkle tree as a **family tree made of fingerprints**. Each
+person in the tree is a fingerprint built by blending the fingerprints
+of their two children. The ancestor at the top of the tree has a single
+fingerprint that is, by construction, a blend of every descendant in
+the family. If you trust that root fingerprint, you can verify any
+single descendant's identity by walking back up the tree through their
+parents — and you only need to know the fingerprints of *their siblings
+at each level*, not the whole family.
 
 ### The construction
 
@@ -257,6 +392,14 @@ heading says: a Merkle tree whose leaves are WOTS+ public keys.
 
 The XMSS public key is just the **Merkle root**. That one hash commits to
 every WOTS+ public key at the leaves.
+
+Picture it as a **key ring** with many one-use stamps hanging off it.
+Each stamp has its own unique seal (a WOTS+ keypair), and the ring
+itself has a tiny engraved label (the Merkle root) that certifies *"all
+of these stamps are mine."* To stamp a document, you pick an unused
+stamp from the ring, press it onto the document, and attach a short
+proof that the stamp belongs to this ring. The ring's label never
+changes, no matter which stamp you used.
 
 ### Signing with XMSS
 
@@ -327,14 +470,19 @@ Here's the insight that makes SPHINCS+ work:
 > Instead of remembering which leaf you've used, derive the leaf from the
 > message itself.
 
-Specifically, SPHINCS+ uses a pseudorandom function keyed by a secret:
+Specifically, SPHINCS+ uses a **pseudorandom function** (PRF) keyed by
+a secret. A PRF is a function whose output *looks* completely random
+to anyone who doesn't know the secret key, but is perfectly
+deterministic for anyone who does — same inputs always produce the
+same output. You can build one out of a hash function in a few lines
+of code, and SPHINCS+ does.
 
 ```
 leaf_index = PRF(sk_prf, message_hash)
 ```
 
-The same message always maps to the same leaf. Different messages map to
-essentially random, uncorrelated leaves. No counter. No disk. No
+The same message always maps to the same leaf. Different messages map
+to essentially random, uncorrelated leaves. No counter. No disk. No
 synchronization between devices.
 
 ### Stateful vs stateless, side by side
@@ -360,11 +508,14 @@ A deterministic leaf selection has a price: if two messages happen to
 collide on the same leaf, you do get WOTS+-style reuse, with all the
 forgeability that implies. To make that collision probability
 astronomically small you need a *huge* number of possible leaves —
-Quantroot targets `2³²`, roughly four billion.
+Quantroot targets `2³²`, roughly four billion. For context, that's
+more than the total number of Bitcoin transactions ever made, several
+times over; it's also many more transactions than any one wallet will
+ever realistically produce.
 
 A single XMSS tree of height 32 is impractical: generating the root
-requires hashing every one of its four billion leaves. Signing the first
-message would take forever.
+requires hashing every one of its four billion leaves. Signing the
+first message would take forever.
 
 The fix is to build the tree out of smaller trees.
 
@@ -373,7 +524,18 @@ The fix is to build the tree out of smaller trees.
 ## The Hypertree
 
 SPHINCS+ stacks multiple XMSS trees into a **hypertree** — a tree of
-trees — with FORS instances at the very bottom:
+trees — with FORS instances at the very bottom.
+
+Think of it as a **nested filing cabinet**. The top drawer of the
+cabinet contains a handful of folders, each of which in turn is a
+smaller cabinet with its own drawers. Dig down a few levels and you
+reach the actual documents. The public key on the front of the
+cabinet is a single label — one short string — that certifies
+everything stored inside, no matter how deep. You never have to open
+the whole cabinet to prove a single document is in there; you only
+walk the chain of drawers that contain it.
+
+Concretely:
 
 ```
 Layer d-1 (top):     [XMSS tree]            ← root is the SPHINCS+ public key
@@ -431,6 +593,16 @@ FORS — Forest Of Random Subsets — is the signature scheme at the bottom
 of the hypertree. It signs the message hash directly, and it is a
 **few-time** signature: safe to sign a small number of messages rather
 than exactly one.
+
+Think of FORS as a **multi-dial combination lock**. A standard
+combination lock has one dial and one correct number; FORS has `k`
+dials, each drawn from its own set of possible values. To "sign" a
+message, you don't reveal the whole combination — only the specific
+digit the message points to on each dial, plus enough context (an
+authentication path within each mini-tree) for the verifier to check
+that digit is genuinely part of your lock. Different messages light up
+different dial positions, so each signature reveals a different subset
+of your secrets.
 
 ### Structure
 
