@@ -3,7 +3,7 @@
 This document tracks all changes in the `quantroot` branches of
 `repos/bitcoin` and `repos/bips` relative to their upstream base.
 
-Last updated: 2026-04-09
+Last updated: 2026-04-15
 
 ---
 
@@ -11,13 +11,13 @@ Last updated: 2026-04-09
 
 | Metric | Bitcoin | BIPs |
 |--------|---------|------|
-| Commits | 6 | 1 |
+| Commits | 8 | 1 |
 | Files changed | 81 | 8 |
-| New files | 42 | 8 |
-| Modified files | 39 | 0 |
-| Lines added | 10,588 | 1,849 |
+| New files | 41 | 8 |
+| Modified files | 40 | 0 |
+| Lines added | 10,741 | 1,849 |
 | Lines removed | 45 | 0 |
-| **Total delta** | **+10,543** | **+1,849** |
+| **Total delta** | **+10,696** | **+1,849** |
 
 ---
 
@@ -82,7 +82,7 @@ Last updated: 2026-04-09
 | `src/qextkey.cpp` | New | 158 | Encode/decode, base58, child derivation, address construction |
 | `src/wallet/qextkey.h` | New | 22 | Wallet-layer qextkey helpers |
 | `src/wallet/qextkey.cpp` | New | 6 | Implementation |
-| `src/wallet/rpc/sphincs.cpp` | New | 783 | 8 RPCs: createsphincskey, getquantumaddress, export/import qpub/qprv, listsphincskeys, sphincsspend |
+| `src/wallet/rpc/sphincs.cpp` | New | 835 | 8 RPCs: createsphincskey, getquantumaddress, export/import qpub/qprv, listsphincskeys, sphincsspend |
 | `src/script/descriptor.cpp` | Mod | +269 | QISDescriptor + QRDescriptor classes, parsers |
 | `src/script/sign.cpp` | Mod | +178 | SPHINCS+ pre-signing, hybrid script fallback, annex construction, activation-aware verify flags |
 | `src/script/sign.h` | Mod | +12 | SignatureData: force_script_path, sphincs_signing_key, taproot_annex |
@@ -104,7 +104,7 @@ Last updated: 2026-04-09
 | `src/CMakeLists.txt` | Mod | +1 | Register qextkey |
 | `src/rpc/client.cpp` | Mod | +1 | CLI boolean param conversion |
 
-**27 files, +2,261 lines, -39 lines**
+**27 files, +2,313 lines, -39 lines**
 
 ### Commit 5: `test: add wallet unit and functional tests`
 
@@ -112,15 +112,15 @@ Last updated: 2026-04-09
 |------|--------|-------|-------------|
 | `src/wallet/test/sphincskeys_tests.cpp` | New | 345 | 17 unit tests: key generation, determinism, sign/verify |
 | `src/wallet/test/qextkey_tests.cpp` | New | 364 | 16 unit tests: serialization, base58, child derivation |
-| `src/wallet/test/qis_descriptor_tests.cpp` | New | 352 | 11 unit tests: qr()/qis() parsing, expansion |
+| `src/wallet/test/qis_descriptor_tests.cpp` | New | 419 | 14 unit tests: qr()/qis() parsing, expansion, round-trip serialization |
 | `src/wallet/test/sphincskeys_db_tests.cpp` | New | 103 | 2 unit tests: DB persistence |
 | `src/wallet/test/CMakeLists.txt` | Mod | +4 | Register test files |
 | `test/functional/wallet_sphincs.py` | New | 295 | Full RPC lifecycle + encrypted wallet |
 | `test/functional/wallet_sphincs_psbt.py` | New | 100 | PSBT creation, signing, finalization |
 | `test/functional/wallet_sphincs_activation.py` | New | 99 | Activation boundary tests |
-| `test/functional/wallet_sphincs_scriptpath.py` | New | 157 | sphincsspend, PSBT emergency, sweep, errors |
+| `test/functional/wallet_sphincs_scriptpath.py` | New | 177 | sphincsspend, PSBT emergency, sweep, targeted selection, errors |
 
-**9 files, +1,819 lines**
+**9 files, +1,886 lines**
 
 ### Commit 6: `doc: add BIP specifications, test vectors, and wallet documentation`
 
@@ -134,6 +134,24 @@ Last updated: 2026-04-09
 | `doc/quantum-insured-wallet.md` | New | 136 | Developer guide |
 
 **6 files, +1,252 lines**
+
+### Commit 7: `wallet: canonicalize qr() descriptor serialization`
+
+| File | Status | Lines | Description |
+|------|--------|-------|-------------|
+| `src/script/descriptor.cpp` | Mod | +43/−42 | `QRDescriptor::ToStringHelper` override serializes canonical `qr(qpub...)` form; parse simplification |
+| `src/wallet/test/qis_descriptor_tests.cpp` | Mod | +67 | 3 new tests: round-trip serialization, reject legacy form, canonical wallet DB write |
+
+**2 files, +123 lines, −42 lines**
+
+### Commit 8: `wallet: select minimum QI inputs in non-sweep sphincsspend`
+
+| File | Status | Lines | Description |
+|------|--------|-------|-------------|
+| `src/wallet/rpc/sphincs.cpp` | Mod | +70/−12 | QICoin struct, largest-first sort, incremental selection for non-sweep; sweep unchanged |
+| `test/functional/wallet_sphincs_scriptpath.py` | Mod | +26/−6 | New test 3: partial spend asserts fewer inputs than total QI UTXOs |
+
+**2 files, +84 lines, −12 lines**
 
 ---
 
@@ -163,11 +181,11 @@ Last updated: 2026-04-09
 | SPHINCS+ library | 14 | 3 | 3,286 | 26% |
 | Consensus (interpreter, validation, policy) | 1 | 12 | 380 | 3% |
 | Consensus tests | 3 | 3 | 1,590 | 13% |
-| Wallet (keys, descriptors, RPCs, signing) | 7 | 20 | 2,261 | 18% |
-| Wallet tests | 8 | 1 | 1,819 | 15% |
+| Wallet (keys, descriptors, RPCs, signing) | 7 | 20 | 2,313 | 18% |
+| Wallet tests | 8 | 1 | 1,886 | 15% |
 | Documentation | 6 | 0 | 1,252 | 10% |
 | BIP specifications | 8 | 0 | 1,849 | 15% |
-| **Total** | **47** | **39** | **12,437** | **100%** |
+| **Total** | **47** | **39** | **12,556** | **100%** |
 
 ### Consensus-only footprint
 
@@ -180,6 +198,6 @@ documentation, the consensus-critical changes are:
 
 ### Wallet-only footprint
 
-- **27 files** (7 new, 20 modified), **+2,261 lines**, **-39 lines**
-- Largest new files: `sphincs.cpp` (783 lines, 8 RPCs), `sphincskeys.h/.cpp`
+- **27 files** (7 new, 20 modified), **+2,313 lines**, **-39 lines**
+- Largest new files: `sphincs.cpp` (835 lines, 8 RPCs), `sphincskeys.h/.cpp`
   (274 lines), `qextkey.h/.cpp` (245 lines)
